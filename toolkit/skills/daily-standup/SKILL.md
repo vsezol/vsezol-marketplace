@@ -18,7 +18,7 @@ Collects user activity from three sources — **Jira**, **GitLab**, and **Slack*
 
 ## Interactive Setup
 
-Before starting data collection, use `AskUserQuestion` to clarify missing details:
+This skill is designed to run autonomously (e.g. on a schedule) without user interaction when secrets are configured. Only ask questions when strictly necessary.
 
 **If no company argument is provided**, ask:
 
@@ -29,15 +29,7 @@ Options:
 2. Other (specify)
 ```
 
-**After collecting data, before sending**, ask:
-
-```
-Report is ready. How should I deliver it?
-Options:
-1. Send to Telegram (default chat)
-2. Send to Telegram (specify chat ID)
-3. Just show the report here, don't send
-```
+**Delivery is automatic** — after collecting data, send the report to Telegram using the `send-tg-msg` skill without asking the user. The skill reads `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` from `~/.vsezol-marketplace/secrets.json`. Only ask the user if secrets are missing.
 
 ## Steps
 
@@ -116,7 +108,7 @@ If there's no data from a source — write "no activity for this date", don't sk
 
 ### Step 6: Send to Telegram
 
-Use the `send-tg-msg` skill to deliver the report. It will read the chat ID and bot token from `~/.vsezol-marketplace/secrets.json`. If no chat_id is configured there, ask the user.
+Use the `send-tg-msg` skill to deliver the report. It reads the chat ID and bot token from `~/.vsezol-marketplace/secrets.json`. If secrets are already configured, send immediately without asking the user. Only use `AskUserQuestion` if `TELEGRAM_BOT_TOKEN` or `TELEGRAM_CHAT_ID` is missing.
 
 Always send the report, even if data is scarce — "low activity" is better than silence.
 

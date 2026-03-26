@@ -20,9 +20,9 @@ Example: `/send-tg-msg 123456789 Hello, this is a test message!`
 
 ## Interactive Setup
 
-Use `AskUserQuestion` to handle missing configuration:
+This skill is designed to work silently when secrets are already configured. **Only** use `AskUserQuestion` when required data is missing — never prompt if everything is available.
 
-**If `TELEGRAM_BOT_TOKEN` is missing**, ask:
+**If `TELEGRAM_BOT_TOKEN` is missing in secrets**, ask:
 
 ```
 I need a Telegram Bot Token to send messages.
@@ -33,7 +33,7 @@ Options:
 3. Cancel
 ```
 
-**If `chat_id` is not provided and `TELEGRAM_CHAT_ID` is missing in secrets**, ask:
+**If `chat_id` is not provided as argument AND `TELEGRAM_CHAT_ID` is missing in secrets**, ask:
 
 ```
 No chat ID specified. Where should I send the message?
@@ -42,6 +42,8 @@ Options:
 2. Save a default chat ID for future use
 3. Cancel
 ```
+
+**If both `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` (or argument `chat_id`) are available** — skip all questions and send immediately.
 
 ## Secrets
 
