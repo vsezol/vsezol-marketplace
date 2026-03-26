@@ -1,22 +1,23 @@
 {
-  "name": "vsezol",
-  "displayName": "vsezol",
-  "description": "Vsezol's personal skill marketplace — daily standup reports, Telegram notifications, MCP infrastructure setup.",
-  "author": "vsezol",
-  "skills": [
+  "name": "vsezol-marketplace",
+  "owner": {
+    "name": "vsezol",
+    "email": "vsezold@gmail.com"
+  },
+  "plugins": [
     {
       "name": "daily-standup",
-      "path": "daily-standup",
+      "source": "./daily-standup",
       "description": "Daily standup report: Jira + GitLab + Slack → Telegram"
     },
     {
       "name": "send-tg-msg",
-      "path": "send-tg-msg",
+      "source": "./send-tg-msg",
       "description": "Send messages to Telegram via Bot API"
     },
     {
       "name": "setup",
-      "path": "setup",
+      "source": "./setup",
       "description": "Install MCP servers (GitLab, Slack, Atlassian, Context7) into Claude Desktop config"
     }
   ]
