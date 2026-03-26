@@ -5,6 +5,7 @@ description: >
   for the previous working day, then sends it to Telegram. Takes a company name as argument.
   Use this skill when the user asks to: prepare a standup report, summarize what was done yesterday,
   daily standup, daily report, "what did I do yesterday", morning status update.
+argument-hint: "[company-name]"
 ---
 
 # Daily Standup Report
@@ -13,10 +14,30 @@ Collects user activity from three sources — **Jira**, **GitLab**, and **Slack*
 
 ## Argument
 
-Takes one argument — the **company name** (e.g. `thetradingpit`).
-Used to find the correct Jira site and GitLab projects.
+`$0` — **company name** (e.g. `thetradingpit`). Used to find the correct Jira site and GitLab projects.
 
-If no argument is provided, ask the user: "Which company should I prepare the report for?"
+## Interactive Setup
+
+Before starting data collection, use `AskUserQuestion` to clarify missing details:
+
+**If no company argument is provided**, ask:
+
+```
+Which company should I prepare the report for?
+Options:
+1. thetradingpit
+2. Other (specify)
+```
+
+**After collecting data, before sending**, ask:
+
+```
+Report is ready. How should I deliver it?
+Options:
+1. Send to Telegram (default chat)
+2. Send to Telegram (specify chat ID)
+3. Just show the report here, don't send
+```
 
 ## Steps
 

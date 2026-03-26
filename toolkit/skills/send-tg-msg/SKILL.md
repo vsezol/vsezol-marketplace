@@ -4,6 +4,7 @@ description: >
   Sends a message to Telegram via Bot API. Arguments: chat_id and message text in Markdown format.
   Use this skill when you need to: send a Telegram message, push a notification to TG,
   "send to telegram", "message on telegram", notify telegram, send telegram message.
+argument-hint: "[chat_id] [message text]"
 ---
 
 # Send Telegram Message
@@ -12,12 +13,35 @@ Sends a message to Telegram via Bot API.
 
 ## Arguments
 
-Format: `<chat_id> <message text>`
+- `$0` — **chat_id** (optional) — Telegram chat or user ID (numeric). If omitted, reads `TELEGRAM_CHAT_ID` from secrets.
+- `$1...` — **message text** in Markdown format.
 
-- **chat_id** — Telegram chat or user ID (numeric). If omitted, reads `TELEGRAM_CHAT_ID` from secrets.
-- **text** — message content in Markdown format
+Example: `/send-tg-msg 123456789 Hello, this is a test message!`
 
-Example: `123456789 Hello, this is a test message!`
+## Interactive Setup
+
+Use `AskUserQuestion` to handle missing configuration:
+
+**If `TELEGRAM_BOT_TOKEN` is missing**, ask:
+
+```
+I need a Telegram Bot Token to send messages.
+How would you like to proceed?
+Options:
+1. I'll provide the token now (get one from @BotFather in Telegram)
+2. Run the setup skill to configure all secrets at once
+3. Cancel
+```
+
+**If `chat_id` is not provided and `TELEGRAM_CHAT_ID` is missing in secrets**, ask:
+
+```
+No chat ID specified. Where should I send the message?
+Options:
+1. Enter a chat ID manually
+2. Save a default chat ID for future use
+3. Cancel
+```
 
 ## Secrets
 
@@ -47,8 +71,7 @@ TELEGRAM_BOT_TOKEN=$(python3 -c "import json; print(json.load(open('$SECRETS_FIL
 TELEGRAM_CHAT_ID=$(python3 -c "import json; print(json.load(open('$SECRETS_FILE')).get('TELEGRAM_CHAT_ID', ''))")
 ```
 
-If the secrets file doesn't exist or is missing `TELEGRAM_BOT_TOKEN`, ask the user:
-"I need a Telegram Bot Token to send messages. You can get one from @BotFather in Telegram. Please provide the token and I'll save it for future use."
+If the secrets file doesn't exist or is missing `TELEGRAM_BOT_TOKEN`, use the interactive setup above.
 
 Then save it:
 ```bash

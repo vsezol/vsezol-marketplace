@@ -7,6 +7,7 @@ description: >
   Use this skill when the user wants to: set up MCP, add a new MCP server,
   install infrastructure, configure secrets, add telegram token, setup mcp,
   "connect gitlab/slack/atlassian", "configure environment", bootstrap dev environment.
+argument-hint: "[action: install | secrets | list]"
 ---
 
 # Setup — MCP & Secrets Installer
@@ -14,6 +15,59 @@ description: >
 This skill manages two things:
 1. **MCP servers** — installs them into Claude Desktop config from `mcp_template.json`
 2. **Secrets** — stores API tokens and credentials in `~/.vsezol-marketplace/secrets.json`
+
+## Arguments
+
+- `$0` — **action** (optional): `install`, `secrets`, or `list`.
+
+Example: `/setup install` or `/setup secrets`
+
+## Interactive Setup
+
+Use `AskUserQuestion` for all user decisions:
+
+**If no argument is provided**, ask:
+
+```
+What would you like to set up?
+Options:
+1. Install MCP servers (GitLab, Slack, Atlassian, Context7)
+2. Configure secrets (Telegram token, chat ID)
+3. Show available MCP servers and their status
+4. Full setup (secrets + MCP servers)
+```
+
+**When installing MCP servers**, show available options:
+
+```
+Which MCP servers would you like to install?
+Options:
+1. GitLab — access to repos, MRs, issues
+2. Context7 — library documentation lookup
+3. Atlassian (Jira + Confluence) — cloud connector, connect via Settings → Connectors
+4. Slack — cloud connector, connect via Settings → Connectors
+5. All local servers (GitLab + Context7)
+```
+
+**When configuring secrets**, ask one at a time:
+
+```
+Let's configure your secrets.
+Do you have a Telegram Bot Token? (Get one from @BotFather in Telegram)
+Options:
+1. Yes, I'll paste it now
+2. Skip for now
+```
+
+Then:
+
+```
+Do you have a Telegram Chat ID for notifications?
+(Send /start to your bot, then check https://api.telegram.org/bot<TOKEN>/getUpdates)
+Options:
+1. Yes, I'll paste it now
+2. Skip for now
+```
 
 ## Secrets management
 
