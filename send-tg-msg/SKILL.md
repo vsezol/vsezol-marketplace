@@ -1,36 +1,36 @@
 ---
 name: send-tg-msg
 description: >
-  Отправляет сообщение в Telegram через Bot API. Аргументы: chat_id и текст сообщения в формате Markdown.
-  Используй этот скилл когда нужно: отправить сообщение в Telegram, послать уведомление в ТГ,
-  "отправь в телегу", "напиши в телеграм", notify telegram, send telegram message.
+  Sends a message to Telegram via Bot API. Arguments: chat_id and message text in Markdown format.
+  Use this skill when you need to: send a Telegram message, push a notification to TG,
+  "send to telegram", "message on telegram", notify telegram, send telegram message.
 ---
 
 # Send Telegram Message
 
-Отправляет сообщение в Telegram через Bot API.
+Sends a message to Telegram via Bot API.
 
-## Аргументы
+## Arguments
 
-Скилл принимает аргументы в формате: `<chat_id> <текст сообщения>`
+Format: `<chat_id> <message text>`
 
-- **chat_id** — ID чата или пользователя в Telegram (числовой). Если не передан, используй значение по умолчанию: `REDACTED_CHAT_ID`
-- **текст** — содержимое сообщения в формате Markdown
+- **chat_id** — Telegram chat or user ID (numeric). Default: `REDACTED_CHAT_ID`
+- **text** — message content in Markdown format
 
-Пример вызова: `REDACTED_CHAT_ID Привет, это тестовое сообщение!`
+Example: `REDACTED_CHAT_ID Hello, this is a test message!`
 
-## Конфигурация
+## Configuration
 
 - **Bot Token:** `REDACTED_TELEGRAM_BOT_TOKEN`
 
-## Как отправить
+## How to send
 
-Используй bash + curl:
+Use bash + curl:
 
 ```bash
 TELEGRAM_BOT_TOKEN="REDACTED_TELEGRAM_BOT_TOKEN"
-CHAT_ID="<chat_id из аргумента>"
-MESSAGE="<текст из аргумента>"
+CHAT_ID="<chat_id from argument>"
+MESSAGE="<text from argument>"
 
 curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
   -d "chat_id=${CHAT_ID}" \
@@ -38,9 +38,9 @@ curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
   --data-urlencode "text=${MESSAGE}"
 ```
 
-## Ограничения и обработка ошибок
+## Limitations and error handling
 
-- Максимальная длина сообщения Telegram — **4096 символов**. Если текст длиннее, разбей на несколько сообщений и отправь последовательно.
-- Если API возвращает ошибку парсинга Markdown, попробуй отправить с `parse_mode=HTML` или без parse_mode.
-- Если API недоступен, сообщи пользователю об ошибке и предложи сохранить текст в файл.
-- Всегда проверяй ответ API — поле `"ok": true` означает успех.
+- Max Telegram message length is **4096 characters**. If text is longer, split into multiple messages and send sequentially.
+- If the API returns a Markdown parsing error, retry with `parse_mode=HTML` or without parse_mode.
+- If the API is unreachable, inform the user and offer to save the text to a file.
+- Always check the API response — `"ok": true` means success.

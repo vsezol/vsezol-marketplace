@@ -1,36 +1,35 @@
 ---
 name: daily-standup
 description: >
-  Генерирует ежедневный отчёт перед дейли-стендапом, собирая активность из Jira, GitLab и Slack за вчерашний день,
-  и отправляет его в Telegram. Принимает аргумент — название компании.
-  Используй этот скилл когда пользователь просит: подготовить отчёт к дейли, собрать что было сделано вчера,
-  standup report, дейли-отчёт, "что я сделал вчера", утренний отчёт по задачам.
+  Generates a daily standup report by collecting activity from Jira, GitLab, and Slack
+  for the previous working day, then sends it to Telegram. Takes a company name as argument.
+  Use this skill when the user asks to: prepare a standup report, summarize what was done yesterday,
+  daily standup, daily report, "what did I do yesterday", morning status update.
 ---
 
 # Daily Standup Report
 
-Этот скилл собирает активность пользователя за вчерашний день из трёх источников — **Jira**, **GitLab** и **Slack** — формирует краткий отчёт для дейли-стендапа и отправляет его в Telegram.
+Collects user activity from three sources — **Jira**, **GitLab**, and **Slack** — for the previous working day, formats a standup report, and sends it to Telegram.
 
-## Аргумент
+## Argument
 
-Скилл принимает один аргумент — **название компании** (например: `thetradingpit`).
-Это название используется для поиска нужного Jira-сайта и GitLab-проектов.
+Takes one argument — the **company name** (e.g. `thetradingpit`).
+Used to find the correct Jira site and GitLab projects.
 
-Если аргумент не передан, спроси пользователя: "Для какой компании подготовить отчёт?"
+If no argument is provided, ask the user: "Which company should I prepare the report for?"
 
-## Пошаговый план
+## Steps
 
-### Шаг 1: Определи целевую дату
+### Step 1: Determine target date
 
-Определи **календарную дату предыдущего рабочего дня** — не временной диапазон, а именно дату. Это важно из-за проблем с таймзонами: привязка к 00:00–23:59 ненадёжна.
+Determine the **calendar date of the previous working day** — not a time range, but a specific date. This is important due to timezone issues: binding to 00:00–23:59 is unreliable.
 
-Логика:
-- Сегодня вторник–пятница → целевая дата = вчера (например, сегодня 26 марта → берём 25 марта)
-- Сегодня понедельник → целевая дата = пятница (пропускаем выходные)
+Logic:
+- Today is Tuesday–Friday → target date = yesterday (e.g. today is March 26 → take March 25)
+- Today is Monday → target date = Friday (skip the weekend)
 
-Вычисли дату через bash:
+Calculate via bash:
 ```bash
-# Получить предыдущий рабочий день (YYYY-MM-DD)
 DOW=$(date +%u)  # 1=Mon, 7=Sun
 if [ "$DOW" -eq 1 ]; then
   TARGET_DATE=$(date -d "3 days ago" +%Y-%m-%d 2>/dev/null || date -v-3d +%Y-%m-%d)
@@ -40,68 +39,68 @@ fi
 echo "$TARGET_DATE"
 ```
 
-Все запросы ниже фильтруй **по этой дате**, а не по относительному "-1d" или временным меткам.
+All queries below filter **by this exact date**, not by relative "-1d" or timestamps.
 
-### Шаг 2: Собери данные из Jira (Atlassian MCP)
+### Step 2: Collect data from Jira (Atlassian MCP)
 
-Используй инструменты Atlassian MCP (они уже подключены в конфиге):
+Use Atlassian MCP tools (connected via config):
 
-1. Вызови `getAccessibleAtlassianResources` чтобы найти сайт компании (по аргументу — названию компании).
-2. Используй `searchJiraIssuesUsingJql` с JQL, привязанным к конкретной дате:
+1. Call `getAccessibleAtlassianResources` to find the company site (match by argument — company name).
+2. Use `searchJiraIssuesUsingJql` with date-bound JQL:
    - `assignee = currentUser() AND updated >= "YYYY-MM-DD" AND updated < "YYYY-MM-DD+1" ORDER BY updated DESC`
-   - Где `YYYY-MM-DD` — это `TARGET_DATE`, а `YYYY-MM-DD+1` — следующий день
-   - Пример: если TARGET_DATE = 2026-03-25, то `updated >= "2026-03-25" AND updated < "2026-03-26"`
-3. Для каждой задачи собери: ключ (PROJ-123), название, текущий статус, и если возможно — переходы статусов
+   - Where `YYYY-MM-DD` is `TARGET_DATE` and `YYYY-MM-DD+1` is the next day
+   - Example: if TARGET_DATE = 2026-03-25, then `updated >= "2026-03-25" AND updated < "2026-03-26"`
+3. For each issue collect: key (PROJ-123), title, current status, and if possible — status transitions
 
-### Шаг 3: Собери данные из GitLab (GitLab MCP)
+### Step 3: Collect data from GitLab (GitLab MCP)
 
-Используй инструменты GitLab MCP (`@zereight/mcp-gitlab`, подключен в конфиге):
+Use GitLab MCP tools (`@zereight/mcp-gitlab`, connected via config):
 
-1. Вызови `my_issues` или `list_issues` с фильтром `updated_after=TARGET_DATE` и `updated_before=TARGET_DATE+1` (следующий день)
-2. Вызови `list_merge_requests` с фильтрами `updated_after=TARGET_DATE` и `updated_before=TARGET_DATE+1`, scope=all — найди MR которые пользователь открывал, обновлял или мержил именно в эту дату
-3. Для каждого MR собери: номер, название, статус (opened/merged/closed), проект
-4. Если доступно — посмотри активность push/коммиты через `list_projects` и связанные инструменты
+1. Call `my_issues` or `list_issues` with `updated_after=TARGET_DATE` and `updated_before=TARGET_DATE+1`
+2. Call `list_merge_requests` with `updated_after=TARGET_DATE` and `updated_before=TARGET_DATE+1`, scope=all — find MRs the user opened, updated, or merged on that exact date
+3. For each MR collect: number, title, status (opened/merged/closed), project
+4. If available — check push/commit activity via `list_projects` and related tools
 
-### Шаг 4: Собери данные из Slack (Slack MCP)
+### Step 4: Collect data from Slack (Slack MCP)
 
-Используй инструменты Slack MCP (подключен в конфиге):
+Use Slack MCP tools (connected via config):
 
-1. Вызови `slack_search_public_and_private` с запросом `from:me on:YYYY-MM-DD` (подставь TARGET_DATE)
-2. Отфильтруй ключевые обсуждения — каналы где пользователь активно участвовал
-3. Для каждого обсуждения кратко опиши тему и решения
+1. Call `slack_search_public_and_private` with query `from:me on:YYYY-MM-DD` (substitute TARGET_DATE)
+2. Filter for key discussions — channels where the user was actively participating
+3. For each discussion briefly describe the topic and decisions
 
-### Шаг 5: Сформируй отчёт
+### Step 5: Format the report
 
-Составь отчёт на **русском языке** в таком формате:
+Compose the report in **Russian** using this format:
 
 ```
-🗓 Дейли-отчёт за [дата]
+🗓 Дейли-отчёт за [date]
 
 📋 Jira:
-• [PROJ-123] Название задачи — статус
-• [PROJ-456] Другая задача — In Progress → Done
+• [PROJ-123] Issue title — status
+• [PROJ-456] Another issue — In Progress → Done
 
 💻 GitLab:
-• MR !789 "Название MR" — merged (project-name)
-• MR !790 "Другой MR" — opened (project-name)
+• MR !789 "MR title" — merged (project-name)
+• MR !790 "Another MR" — opened (project-name)
 
 💬 Slack:
-• #channel-name — обсуждали тему X, решили Y
-• #another-channel — ответил на вопрос про Z
+• #channel-name — discussed topic X, decided Y
+• #another-channel — answered question about Z
 
-🎯 Итого: Краткое резюме в 1-2 предложения — что основного было сделано.
+🎯 Summary: 1-2 sentence recap of what was accomplished.
 ```
 
-Если данных из какого-то источника нет — укажи "нет активности за вчера", не пропускай секцию.
+If there's no data from a source — write "no activity for this date", don't skip the section.
 
-### Шаг 6: Отправь в Telegram
+### Step 6: Send to Telegram
 
-Используй скилл `send-tg-msg` для отправки отчёта. Передай аргументы: `REDACTED_CHAT_ID <текст отчёта>`.
+Use the `send-tg-msg` skill to deliver the report. Pass arguments: `REDACTED_CHAT_ID <report text>`.
 
-Всегда отправляй отчёт, даже если данных мало — лучше отправить "мало активности", чем ничего.
+Always send the report, even if data is scarce — "low activity" is better than silence.
 
-## Обработка ошибок
+## Error handling
 
-- Если один из MCP-источников недоступен — собери данные из остальных и укажи в отчёте какой источник был недоступен
-- Если Telegram API не отвечает — сохрани отчёт в файл и сообщи пользователю
-- Никогда не падай молча — всегда информируй о проблемах
+- If an MCP source is unavailable — collect data from the rest and note which source was down
+- If Telegram API is unreachable — save the report to a file and notify the user
+- Never fail silently — always inform about problems

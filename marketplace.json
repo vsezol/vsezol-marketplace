@@ -1,23 +1,23 @@
 {
   "name": "vsezol",
   "displayName": "vsezol",
-  "description": "Vsezol's personal skill marketplace — daily standup reports, Telegram notifications, and more.",
+  "description": "Vsezol's personal skill marketplace — daily standup reports, Telegram notifications, MCP infrastructure setup.",
   "author": "vsezol",
   "skills": [
     {
       "name": "daily-standup",
       "path": "daily-standup",
-      "description": "Ежедневный отчёт перед дейли: Jira + GitLab + Slack → Telegram"
+      "description": "Daily standup report: Jira + GitLab + Slack → Telegram"
     },
     {
       "name": "send-tg-msg",
       "path": "send-tg-msg",
-      "description": "Отправка сообщений в Telegram через Bot API"
+      "description": "Send messages to Telegram via Bot API"
     },
     {
       "name": "setup",
       "path": "setup",
-      "description": "Установка MCP-серверов из шаблона в конфиг Claude Desktop"
+      "description": "Install MCP servers (GitLab, Slack, Atlassian, Context7) into Claude Desktop config"
     }
   ]
 }

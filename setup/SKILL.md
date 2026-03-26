@@ -1,54 +1,53 @@
 ---
 name: setup
 description: >
-  Устанавливает MCP-серверы из шаблона в конфиг Claude Desktop. Показывает список доступных серверов,
-  спрашивает у пользователя недостающие данные (токены, URL) и добавляет всё в конфиг.
-  Используй этот скилл когда пользователь хочет: настроить MCP, добавить новый MCP-сервер,
-  установить инфраструктуру, setup mcp, "подключи gitlab/github/postgres", "настрой окружение",
-  "какие MCP можно добавить", install mcp servers.
+  Installs MCP servers from a template into Claude Desktop config. Shows available servers,
+  asks the user for missing credentials, and merges everything into the config.
+  Use this skill when the user wants to: set up MCP, add a new MCP server,
+  install infrastructure, setup mcp, "connect gitlab/slack/atlassian", "configure environment",
+  "what MCPs can I add", install mcp servers, bootstrap dev environment.
 ---
 
 # Setup — MCP Infrastructure Installer
 
-Этот скилл управляет установкой MCP-серверов в Claude Desktop. Он работает с шаблоном `mcp_template.json`, где описаны доступные серверы с плейсхолдерами для секретов и настроек.
+This skill manages the installation of MCP servers into Claude Desktop. It uses a template `mcp_template.json` containing server configs with `{{PLACEHOLDER}}` values for secrets and settings.
 
-## Как работает
+## How it works
 
-Шаблон `mcp_template.json` содержит конфигурации MCP-серверов с плейсхолдерами вида `{{PLACEHOLDER}}`. Каждый сервер также имеет поле `_meta` с описанием и подсказками для пользователя — какие данные нужны и где их взять.
+The template defines available MCP servers. Each server has a `_meta` field with a description and prompt hints telling the user what data is needed and where to find it. Servers without placeholders (like context7) can be installed without any user input.
 
-## Два режима работы
+Some servers are **cloud connectors** (Slack, Atlassian) — they connect via Claude's MCP registry UI, not via local npx. The setup skill should guide the user to the Settings → Connectors page for these.
 
-### Режим 1: Через скилл (Claude выполняет)
+## Mode 1: Via skill (Claude executes)
 
-Когда пользователь просит настроить MCP через чат, выполни следующее:
+When the user asks to set up MCP through chat:
 
-1. Прочитай шаблон `setup/mcp_template.json` из маркетплейса
-2. Прочитай текущий конфиг Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
-3. Покажи пользователю список доступных серверов из шаблона — какие уже установлены, какие нет
-4. Спроси, какие хочет установить
-5. Для каждого выбранного сервера найди плейсхолдеры `{{...}}` и спроси у пользователя значения, используя подсказки из `_meta.prompts`
-6. Заполни плейсхолдеры, удали `_meta`, и добавь конфигурацию в `mcpServers` в конфиге Claude
-7. Сохрани конфиг
-8. Напомни перезапустить Claude
+1. Read the template `setup/mcp_template.json` from the marketplace
+2. Read the current Claude Desktop config: `~/Library/Application Support/Claude/claude_desktop_config.json`
+3. Show the user which servers are available — mark which are already installed
+4. Ask which ones they want to install
+5. For each selected server, find `{{...}}` placeholders and ask the user for values using hints from `_meta.prompts`
+6. Fill placeholders, remove `_meta`, and add the config to `mcpServers` in the Claude config
+7. For cloud connectors (servers with `url` field and `_meta.note`), inform the user they need to connect via Claude Settings → Connectors
+8. Save the config
+9. Remind to restart Claude
 
-### Режим 2: Через CLI (пользователь запускает сам)
-
-Пользователь может запустить скрипт `scripts/install.py` из терминала:
+## Mode 2: Via CLI (user runs directly)
 
 ```bash
-# Интерактивный режим — покажет список, спросит что ставить
+# Interactive mode — shows list, asks what to install
 python3 setup/scripts/install.py
 
-# Показать доступные серверы
+# List available servers
 python3 setup/scripts/install.py --list
 
-# Установить конкретные серверы
-python3 setup/scripts/install.py --install gitlab github
+# Install specific servers
+python3 setup/scripts/install.py --install gitlab context7
 ```
 
-## Добавление нового MCP в шаблон
+## Adding a new MCP to the template
 
-Чтобы добавить новый MCP-сервер в шаблон, добавь запись в `mcp_template.json`:
+Add an entry to `mcp_template.json`:
 
 ```json
 "server-name": {
@@ -58,16 +57,17 @@ python3 setup/scripts/install.py --install gitlab github
     "API_KEY": "{{MY_API_KEY}}"
   },
   "_meta": {
-    "description": "Описание что делает этот сервер",
+    "description": "What this server does",
     "prompts": {
-      "MY_API_KEY": "Подсказка для пользователя — где взять этот ключ"
+      "MY_API_KEY": "Where to get this key (e.g. Settings → API Keys)"
     }
   }
 }
 ```
 
-Правила:
-- Плейсхолдеры: `{{NAME}}` — заглавные буквы, underscore
-- `_meta.description` — краткое описание сервера
-- `_meta.prompts` — маппинг плейсхолдер → человекочитаемая подсказка
-- `_meta` удаляется при установке и не попадает в конфиг Claude
+Rules:
+- Placeholders: `{{NAME}}` — uppercase letters and underscores
+- `_meta.description` — short server description
+- `_meta.prompts` — maps placeholder → human-readable hint
+- `_meta.note` — optional install note (e.g. for cloud connectors)
+- `_meta` is stripped on install and never written to Claude config

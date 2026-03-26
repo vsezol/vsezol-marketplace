@@ -9,11 +9,10 @@ and merges them into Claude Desktop config.
 Usage:
     python3 install.py                        # interactive mode
     python3 install.py --list                  # list available MCPs
-    python3 install.py --install gitlab github # install specific MCPs
+    python3 install.py --install gitlab context7  # install specific MCPs
 """
 
 import json
-import os
 import sys
 import re
 import argparse
@@ -34,7 +33,7 @@ def save_json(path: Path, data: dict):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-    print(f"\n💾 Сохранено: {path}")
+    print(f"\n💾 Saved: {path}")
 
 
 def find_placeholders(obj) -> list[str]:
@@ -69,17 +68,29 @@ def clean_meta(server_config: dict) -> dict:
     return {k: v for k, v in server_config.items() if k != "_meta"}
 
 
+def is_cloud_connector(server_config: dict) -> bool:
+    """Check if this is a cloud connector (has url, no command)."""
+    return "url" in server_config and "command" not in server_config
+
+
 def list_servers(template: dict):
     servers = template.get("mcpServers", {})
-    print("\n📦 Доступные MCP-серверы:\n")
+    claude_config = load_json(CLAUDE_CONFIG_PATH)
+    print("\n📦 Available MCP servers:\n")
     for name, config in servers.items():
         meta = config.get("_meta", {})
         desc = meta.get("description", "—")
+        note = meta.get("note", "")
         placeholders = find_placeholders(config)
-        placeholder_str = ", ".join(placeholders) if placeholders else "нет"
-        print(f"  • {name}")
+        placeholder_str = ", ".join(placeholders) if placeholders else "none"
+        already = " [installed]" if name in claude_config.get("mcpServers", {}) else ""
+        cloud = " [cloud connector]" if is_cloud_connector(config) else ""
+        print(f"  • {name}{already}{cloud}")
         print(f"    {desc}")
-        print(f"    Нужные данные: {placeholder_str}")
+        if note:
+            print(f"    ℹ️  {note}")
+        else:
+            print(f"    Required data: {placeholder_str}")
         print()
 
 
@@ -97,7 +108,7 @@ def prompt_values(server_name: str, server_config: dict) -> dict:
         return {}
 
     values = {}
-    print(f"\n🔧 Настройка {server_name}:")
+    print(f"\n🔧 Configuring {server_name}:")
     for ph in placeholders:
         hint = prompts.get(ph, ph)
         while True:
@@ -105,7 +116,7 @@ def prompt_values(server_name: str, server_config: dict) -> dict:
             if val:
                 values[ph] = val
                 break
-            print("  ⚠️  Значение не может быть пустым")
+            print("  ⚠️  Value cannot be empty")
     return values
 
 
@@ -118,26 +129,35 @@ def install_servers(template: dict, server_names: list[str], interactive: bool =
 
     installed = []
     skipped = []
+    cloud_connectors = []
 
     for name in server_names:
         if name not in servers:
-            print(f"  ❌ {name} — не найден в шаблоне, пропускаю")
+            print(f"  ❌ {name} — not found in template, skipping")
             skipped.append(name)
+            continue
+
+        server_config = servers[name]
+
+        # Cloud connectors can't be installed via config — guide user to UI
+        if is_cloud_connector(server_config):
+            meta = server_config.get("_meta", {})
+            note = meta.get("note", "Connect via Claude Settings → Connectors")
+            cloud_connectors.append((name, note))
             continue
 
         if check_already_installed(claude_config, name):
             if interactive:
-                answer = input(f"\n  ⚠️  {name} уже установлен. Перезаписать? [y/N]: ").strip().lower()
+                answer = input(f"\n  ⚠️  {name} is already installed. Overwrite? [y/N]: ").strip().lower()
                 if answer != "y":
-                    print(f"  ⏭  {name} — пропущен")
+                    print(f"  ⏭  {name} — skipped")
                     skipped.append(name)
                     continue
             else:
-                print(f"  ⏭  {name} — уже установлен, пропускаю")
+                print(f"  ⏭  {name} — already installed, skipping")
                 skipped.append(name)
                 continue
 
-        server_config = servers[name]
         values = prompt_values(name, server_config) if interactive else {}
 
         filled = fill_placeholders(server_config, values)
@@ -146,7 +166,7 @@ def install_servers(template: dict, server_names: list[str], interactive: bool =
         # Check for unfilled placeholders
         remaining = find_placeholders(cleaned)
         if remaining:
-            print(f"  ⚠️  Остались незаполненные поля: {', '.join(remaining)}")
+            print(f"  ⚠️  Unfilled fields remaining: {', '.join(remaining)}")
             if interactive:
                 for ph in remaining:
                     val = input(f"  {ph}: ").strip()
@@ -157,37 +177,43 @@ def install_servers(template: dict, server_names: list[str], interactive: bool =
 
         claude_config["mcpServers"][name] = cleaned
         installed.append(name)
-        print(f"  ✅ {name} — добавлен")
+        print(f"  ✅ {name} — added")
 
     if installed:
         save_json(CLAUDE_CONFIG_PATH, claude_config)
-        print(f"\n✅ Установлено: {', '.join(installed)}")
-        print("🔄 Перезапусти Claude чтобы изменения вступили в силу")
+        print(f"\n✅ Installed: {', '.join(installed)}")
+        print("🔄 Restart Claude for changes to take effect")
     else:
-        print("\n📭 Ничего не установлено")
+        print("\n📭 Nothing installed")
+
+    if cloud_connectors:
+        print(f"\n☁️  Cloud connectors (connect manually):")
+        for name, note in cloud_connectors:
+            print(f"  • {name} — {note}")
 
     if skipped:
-        print(f"⏭  Пропущено: {', '.join(skipped)}")
+        print(f"⏭  Skipped: {', '.join(skipped)}")
 
 
 def interactive_mode(template: dict):
     servers = template.get("mcpServers", {})
     claude_config = load_json(CLAUDE_CONFIG_PATH)
 
-    print("\n🚀 vsezol marketplace — установка MCP-серверов\n")
-    print("Выбери серверы для установки (через пробел), или 'all' для всех:\n")
+    print("\n🚀 vsezol marketplace — MCP server installer\n")
+    print("Choose servers to install (space-separated), or 'all' for everything:\n")
 
     for i, (name, config) in enumerate(servers.items(), 1):
         meta = config.get("_meta", {})
         desc = meta.get("description", "")
-        already = " [установлен]" if check_already_installed(claude_config, name) else ""
-        print(f"  {i}. {name} — {desc}{already}")
+        already = " [installed]" if check_already_installed(claude_config, name) else ""
+        cloud = " [cloud]" if is_cloud_connector(config) else ""
+        print(f"  {i}. {name} — {desc}{already}{cloud}")
 
     print()
-    choice = input("Номера или имена (например: 1 3 или gitlab github): ").strip()
+    choice = input("Numbers or names (e.g. 1 3 or gitlab context7): ").strip()
 
     if not choice:
-        print("Ничего не выбрано.")
+        print("Nothing selected.")
         return
 
     names = list(servers.keys())
@@ -204,7 +230,7 @@ def interactive_mode(template: dict):
             elif part in servers:
                 selected.append(part)
             else:
-                print(f"  ⚠️  '{part}' не найден, пропускаю")
+                print(f"  ⚠️  '{part}' not found, skipping")
 
     if selected:
         install_servers(template, selected, interactive=True)
@@ -212,14 +238,14 @@ def interactive_mode(template: dict):
 
 def main():
     parser = argparse.ArgumentParser(description="vsezol marketplace — MCP installer")
-    parser.add_argument("--list", action="store_true", help="Показать доступные MCP-серверы")
-    parser.add_argument("--install", nargs="+", metavar="NAME", help="Установить конкретные MCP-серверы")
-    parser.add_argument("--template", type=str, help="Путь к шаблону (по умолчанию: mcp_template.json)")
+    parser.add_argument("--list", action="store_true", help="List available MCP servers")
+    parser.add_argument("--install", nargs="+", metavar="NAME", help="Install specific MCP servers")
+    parser.add_argument("--template", type=str, help="Path to template (default: mcp_template.json)")
     args = parser.parse_args()
 
     template_path = Path(args.template) if args.template else TEMPLATE_PATH
     if not template_path.exists():
-        print(f"❌ Шаблон не найден: {template_path}")
+        print(f"❌ Template not found: {template_path}")
         sys.exit(1)
 
     template = load_json(template_path)

@@ -6,19 +6,29 @@ Personal skill marketplace for Claude Cowork.
 
 | Skill | Description |
 |-------|-------------|
-| `vsezol:daily-standup` | Ежедневный отчёт перед дейли: Jira + GitLab + Slack → Telegram |
-| `vsezol:send-tg-msg` | Отправка сообщений в Telegram через Bot API |
+| `vsezol:daily-standup` | Daily standup report: Jira + GitLab + Slack → Telegram |
+| `vsezol:send-tg-msg` | Send messages to Telegram via Bot API |
+| `vsezol:setup` | Install MCP servers (GitLab, Slack, Atlassian, Context7) into Claude Desktop config |
 
 ## Usage
 
 ```
 /vsezol:daily-standup thetradingpit
-/vsezol:send-tg-msg REDACTED_CHAT_ID Привет!
+/vsezol:send-tg-msg REDACTED_CHAT_ID Hello!
+/vsezol:setup
 ```
 
-## Requirements
+## MCP servers in template
 
-- **Slack MCP** — connected via Claude MCP registry
-- **Atlassian MCP** — connected via Claude MCP registry
-- **GitLab MCP** — `@zereight/mcp-gitlab` configured in MCP settings
-- **Telegram Bot** — token configured in `send-tg-msg` skill
+| Server | Type | Description |
+|--------|------|-------------|
+| gitlab | Local (npx) | GitLab MCP — merge requests, issues, commits |
+| slack | Cloud connector | Slack MCP — messages, channels, search |
+| atlassian | Cloud connector | Atlassian MCP — Jira issues, Confluence pages |
+| context7 | Local (npx) | Context7 MCP — up-to-date library documentation |
+
+## Quick setup
+
+```bash
+python3 ~/projects/pet/vsezol-marketplace/setup/scripts/install.py
+```
