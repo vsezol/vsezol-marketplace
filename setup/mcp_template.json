@@ -38,6 +38,34 @@
         "description": "Context7 MCP — fetch up-to-date documentation for any library directly into your prompt",
         "prompts": {}
       }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "{{FS_PATH}}"],
+      "_meta": {
+        "description": "Filesystem MCP — direct read/write access to local files and directories",
+        "prompts": {
+          "FS_PATH": "Path to the directory to grant access to (e.g. /Users/me/projects)"
+        }
+      }
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "git-mcp-server"],
+      "env": {
+        "GIT_BASE_DIR": "{{GIT_BASE_DIR}}",
+        "GIT_USERNAME": "{{GIT_USERNAME}}",
+        "GIT_EMAIL": "{{GIT_EMAIL}}",
+        "MCP_TRANSPORT_TYPE": "stdio"
+      },
+      "_meta": {
+        "description": "Git MCP — commit, push, pull, branch, merge, and all git operations",
+        "prompts": {
+          "GIT_BASE_DIR": "Base directory for git repos (e.g. /Users/me/projects)",
+          "GIT_USERNAME": "Your git username",
+          "GIT_EMAIL": "Your git email"
+        }
+      }
     }
   }
 }
