@@ -95,7 +95,7 @@ If there's no data from a source — write "no activity for this date", don't sk
 
 ### Step 6: Send to Telegram
 
-Use the `send-tg-msg` skill to deliver the report. Pass arguments: `REDACTED_CHAT_ID <report text>`.
+Use the `send-tg-msg` skill to deliver the report. It will read the chat ID and bot token from `~/.vsezol-marketplace/secrets.json`. If no chat_id is configured there, ask the user.
 
 Always send the report, even if data is scarce — "low activity" is better than silence.
 

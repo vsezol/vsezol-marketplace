@@ -1,53 +1,88 @@
 ---
 name: setup
 description: >
-  Installs MCP servers from a template into Claude Desktop config. Shows available servers,
-  asks the user for missing credentials, and merges everything into the config.
+  Installs MCP servers and configures secrets for the vsezol marketplace.
+  Shows available servers, asks for missing credentials, and merges into Claude Desktop config.
+  Also manages secrets (API tokens, chat IDs) stored in ~/.vsezol-marketplace/secrets.json.
   Use this skill when the user wants to: set up MCP, add a new MCP server,
-  install infrastructure, setup mcp, "connect gitlab/slack/atlassian", "configure environment",
-  "what MCPs can I add", install mcp servers, bootstrap dev environment.
+  install infrastructure, configure secrets, add telegram token, setup mcp,
+  "connect gitlab/slack/atlassian", "configure environment", bootstrap dev environment.
 ---
 
-# Setup — MCP Infrastructure Installer
+# Setup — MCP & Secrets Installer
 
-This skill manages the installation of MCP servers into Claude Desktop. It uses a template `mcp_template.json` containing server configs with `{{PLACEHOLDER}}` values for secrets and settings.
+This skill manages two things:
+1. **MCP servers** — installs them into Claude Desktop config from `mcp_template.json`
+2. **Secrets** — stores API tokens and credentials in `~/.vsezol-marketplace/secrets.json`
 
-## How it works
+## Secrets management
 
-The template defines available MCP servers. Each server has a `_meta` field with a description and prompt hints telling the user what data is needed and where to find it. Servers without placeholders (like context7) can be installed without any user input.
+Secrets are stored locally at `~/.vsezol-marketplace/secrets.json` and never committed to git. Other skills (like `send-tg-msg`) read from this file.
 
-Some servers are **cloud connectors** (Slack, Atlassian) — they connect via Claude's MCP registry UI, not via local npx. The setup skill should guide the user to the Settings → Connectors page for these.
+### Supported secrets
 
-## Mode 1: Via skill (Claude executes)
+| Key | Description | Used by |
+|-----|-------------|---------|
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot API token from @BotFather | send-tg-msg, daily-standup |
+| `TELEGRAM_CHAT_ID` | Default Telegram chat/user ID for notifications | send-tg-msg, daily-standup |
 
-When the user asks to set up MCP through chat:
+### How to configure secrets (via skill)
 
-1. Read the template `setup/mcp_template.json` from the marketplace
-2. Read the current Claude Desktop config: `~/Library/Application Support/Claude/claude_desktop_config.json`
-3. Show the user which servers are available — mark which are already installed
-4. Ask which ones they want to install
-5. For each selected server, find `{{...}}` placeholders and ask the user for values using hints from `_meta.prompts`
-6. Fill placeholders, remove `_meta`, and add the config to `mcpServers` in the Claude config
-7. For cloud connectors (servers with `url` field and `_meta.note`), inform the user they need to connect via Claude Settings → Connectors
-8. Save the config
-9. Remind to restart Claude
+When the user asks to set up secrets or when a skill reports missing secrets:
 
-## Mode 2: Via CLI (user runs directly)
+1. Read `~/.vsezol-marketplace/secrets.json` (create if missing)
+2. Check which secrets are present and which are missing
+3. For each missing secret, ask the user to provide the value with a clear hint
+4. Save the updated secrets file
 
 ```bash
-# Interactive mode — shows list, asks what to install
-python3 setup/scripts/install.py
+mkdir -p ~/.vsezol-marketplace
+# Read or create secrets
+python3 -c "
+import json, os
+path = os.path.expanduser('~/.vsezol-marketplace/secrets.json')
+data = json.load(open(path)) if os.path.exists(path) else {}
+# ... update values ...
+json.dump(data, open(path, 'w'), indent=2)
+os.chmod(path, 0o600)  # restrict permissions
+"
+```
 
-# List available servers
-python3 setup/scripts/install.py --list
+### How to configure secrets (via CLI)
 
-# Install specific servers
-python3 setup/scripts/install.py --install gitlab context7
+```bash
+python3 setup/scripts/install.py --secrets
+```
+
+## MCP server installation
+
+### Template
+
+The template `mcp_template.json` defines available MCP servers with `{{PLACEHOLDER}}` values. Each server has a `_meta` field with description and prompt hints.
+
+Some servers are **cloud connectors** (Slack, Atlassian) — they connect via Claude's MCP registry UI, not via local npx.
+
+### Mode 1: Via skill (Claude executes)
+
+1. Read `setup/mcp_template.json` from the marketplace
+2. Read `~/Library/Application Support/Claude/claude_desktop_config.json`
+3. Show which servers are available and which are already installed
+4. Ask which ones to install
+5. For each server, find `{{...}}` placeholders and ask for values
+6. Fill placeholders, remove `_meta`, add to config
+7. For cloud connectors, guide user to Settings → Connectors
+8. Save config and remind to restart Claude
+
+### Mode 2: Via CLI
+
+```bash
+python3 setup/scripts/install.py              # interactive
+python3 setup/scripts/install.py --list        # list servers
+python3 setup/scripts/install.py --install gitlab context7  # install specific
+python3 setup/scripts/install.py --secrets     # configure secrets only
 ```
 
 ## Adding a new MCP to the template
-
-Add an entry to `mcp_template.json`:
 
 ```json
 "server-name": {
@@ -59,7 +94,7 @@ Add an entry to `mcp_template.json`:
   "_meta": {
     "description": "What this server does",
     "prompts": {
-      "MY_API_KEY": "Where to get this key (e.g. Settings → API Keys)"
+      "MY_API_KEY": "Where to get this key"
     }
   }
 }

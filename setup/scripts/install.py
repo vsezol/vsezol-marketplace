@@ -20,6 +20,12 @@ from pathlib import Path
 
 CLAUDE_CONFIG_PATH = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
 TEMPLATE_PATH = Path(__file__).parent.parent / "mcp_template.json"
+SECRETS_PATH = Path.home() / ".vsezol-marketplace" / "secrets.json"
+
+SECRETS_SCHEMA = {
+    "TELEGRAM_BOT_TOKEN": "Telegram Bot Token (get from @BotFather in Telegram)",
+    "TELEGRAM_CHAT_ID": "Default Telegram chat/user ID for notifications",
+}
 
 
 def load_json(path: Path) -> dict:
@@ -236,12 +242,45 @@ def interactive_mode(template: dict):
         install_servers(template, selected, interactive=True)
 
 
+def configure_secrets():
+    """Interactive secrets configuration."""
+    secrets = load_json(SECRETS_PATH)
+
+    print("\n🔐 vsezol marketplace — secrets configuration\n")
+    print(f"Secrets file: {SECRETS_PATH}\n")
+
+    updated = False
+    for key, hint in SECRETS_SCHEMA.items():
+        current = secrets.get(key, "")
+        masked = f"{current[:4]}...{current[-4:]}" if len(current) > 8 else ("(empty)" if not current else current)
+        print(f"  {key}: {masked}")
+        new_val = input(f"    {hint}\n    New value (Enter to keep current): ").strip()
+        if new_val:
+            secrets[key] = new_val
+            updated = True
+            print(f"    ✅ Updated")
+        print()
+
+    if updated:
+        SECRETS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        save_json(SECRETS_PATH, secrets)
+        SECRETS_PATH.chmod(0o600)
+        print(f"✅ Secrets saved to {SECRETS_PATH}")
+    else:
+        print("📭 No changes made")
+
+
 def main():
     parser = argparse.ArgumentParser(description="vsezol marketplace — MCP installer")
     parser.add_argument("--list", action="store_true", help="List available MCP servers")
     parser.add_argument("--install", nargs="+", metavar="NAME", help="Install specific MCP servers")
+    parser.add_argument("--secrets", action="store_true", help="Configure secrets (API tokens, etc.)")
     parser.add_argument("--template", type=str, help="Path to template (default: mcp_template.json)")
     args = parser.parse_args()
+
+    if args.secrets:
+        configure_secrets()
+        return
 
     template_path = Path(args.template) if args.template else TEMPLATE_PATH
     if not template_path.exists():

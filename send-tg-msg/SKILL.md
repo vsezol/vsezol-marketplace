@@ -14,24 +14,59 @@ Sends a message to Telegram via Bot API.
 
 Format: `<chat_id> <message text>`
 
-- **chat_id** — Telegram chat or user ID (numeric). Default: `REDACTED_CHAT_ID`
+- **chat_id** — Telegram chat or user ID (numeric). If omitted, reads `TELEGRAM_CHAT_ID` from secrets.
 - **text** — message content in Markdown format
 
-Example: `REDACTED_CHAT_ID Hello, this is a test message!`
+Example: `123456789 Hello, this is a test message!`
 
-## Configuration
+## Secrets
 
-- **Bot Token:** `REDACTED_TELEGRAM_BOT_TOKEN`
+This skill requires a Telegram bot token stored in `~/.vsezol-marketplace/secrets.json`:
+
+```json
+{
+  "TELEGRAM_BOT_TOKEN": "your-bot-token-here",
+  "TELEGRAM_CHAT_ID": "your-default-chat-id"
+}
+```
+
+### How to load secrets
+
+Before sending, read the secrets file via bash:
+
+```bash
+SECRETS_FILE="$HOME/.vsezol-marketplace/secrets.json"
+
+if [ ! -f "$SECRETS_FILE" ]; then
+  echo "❌ Secrets file not found: $SECRETS_FILE"
+  echo "Run the setup skill or create it manually."
+  exit 1
+fi
+
+TELEGRAM_BOT_TOKEN=$(python3 -c "import json; print(json.load(open('$SECRETS_FILE'))['TELEGRAM_BOT_TOKEN'])")
+TELEGRAM_CHAT_ID=$(python3 -c "import json; print(json.load(open('$SECRETS_FILE')).get('TELEGRAM_CHAT_ID', ''))")
+```
+
+If the secrets file doesn't exist or is missing `TELEGRAM_BOT_TOKEN`, ask the user:
+"I need a Telegram Bot Token to send messages. You can get one from @BotFather in Telegram. Please provide the token and I'll save it for future use."
+
+Then save it:
+```bash
+mkdir -p ~/.vsezol-marketplace
+python3 -c "
+import json, os
+path = os.path.expanduser('~/.vsezol-marketplace/secrets.json')
+data = json.load(open(path)) if os.path.exists(path) else {}
+data['TELEGRAM_BOT_TOKEN'] = 'TOKEN_FROM_USER'
+data['TELEGRAM_CHAT_ID'] = 'CHAT_ID_FROM_USER'
+json.dump(data, open(path, 'w'), indent=2)
+print('✅ Saved to', path)
+"
+```
 
 ## How to send
 
-Use bash + curl:
-
 ```bash
-TELEGRAM_BOT_TOKEN="REDACTED_TELEGRAM_BOT_TOKEN"
-CHAT_ID="<chat_id from argument>"
-MESSAGE="<text from argument>"
-
 curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
   -d "chat_id=${CHAT_ID}" \
   -d "parse_mode=Markdown" \
