@@ -13,6 +13,11 @@
       "name": "send-tg-msg",
       "path": "send-tg-msg",
       "description": "Отправка сообщений в Telegram через Bot API"
+    },
+    {
+      "name": "setup",
+      "path": "setup",
+      "description": "Установка MCP-серверов из шаблона в конфиг Claude Desktop"
     }
   ]
 }

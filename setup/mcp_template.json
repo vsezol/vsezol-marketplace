@@ -1,0 +1,65 @@
+{
+  "mcpServers": {
+    "gitlab": {
+      "command": "npx",
+      "args": ["-y", "@zereight/mcp-gitlab"],
+      "env": {
+        "GITLAB_PERSONAL_ACCESS_TOKEN": "{{GITLAB_TOKEN}}",
+        "GITLAB_API_URL": "{{GITLAB_URL}}/api/v4"
+      },
+      "_meta": {
+        "description": "GitLab MCP — доступ к merge requests, issues, коммитам",
+        "prompts": {
+          "GITLAB_TOKEN": "GitLab Personal Access Token (Settings → Access Tokens → read_api)",
+          "GITLAB_URL": "URL вашего GitLab (например: https://gitlab.com или https://gitlab.company.com)"
+        }
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{{GITHUB_TOKEN}}"
+      },
+      "_meta": {
+        "description": "GitHub MCP — доступ к repos, PRs, issues",
+        "prompts": {
+          "GITHUB_TOKEN": "GitHub Personal Access Token (Settings → Developer settings → Personal access tokens)"
+        }
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "{{POSTGRES_URL}}"],
+      "_meta": {
+        "description": "PostgreSQL MCP — прямые SQL-запросы к базе",
+        "prompts": {
+          "POSTGRES_URL": "PostgreSQL connection string (например: postgresql://user:pass@host:5432/db)"
+        }
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "{{FS_PATH}}"],
+      "_meta": {
+        "description": "Filesystem MCP — доступ к локальным файлам и папкам",
+        "prompts": {
+          "FS_PATH": "Путь к папке, к которой нужен доступ (например: /Users/me/projects)"
+        }
+      }
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "{{BRAVE_API_KEY}}"
+      },
+      "_meta": {
+        "description": "Brave Search MCP — веб-поиск через Brave API",
+        "prompts": {
+          "BRAVE_API_KEY": "Brave Search API key (https://brave.com/search/api/)"
+        }
+      }
+    }
+  }
+}
