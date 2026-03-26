@@ -5,16 +5,17 @@ description: >
   for the previous working day, then sends it to Telegram. Takes a company name as argument.
   Use this skill when the user asks to: prepare a standup report, summarize what was done yesterday,
   daily standup, daily report, "what did I do yesterday", morning status update.
-argument-hint: "[company-name]"
+argument-hint: "[company-name] [YYYY-MM-DD]"
 ---
 
 # Daily Standup Report
 
 Collects user activity from three sources — **Jira**, **GitLab**, and **Slack** — for the previous working day, formats a standup report, and sends it to Telegram.
 
-## Argument
+## Arguments
 
-`$0` — **company name** (e.g. `thetradingpit`). Used to find the correct Jira site and GitLab projects.
+- `$0` — **company name** (e.g. `thetradingpit`). Used to find the correct Jira site and GitLab projects.
+- `$1` — **date** (optional, format `YYYY-MM-DD`). The date to generate the report for. If omitted, uses the previous working day.
 
 ## Interactive Setup
 
@@ -35,19 +36,23 @@ Options:
 
 ### Step 1: Determine target date
 
-Determine the **calendar date of the previous working day** — not a time range, but a specific date. This is important due to timezone issues: binding to 00:00–23:59 is unreliable.
+If a date argument (`$1`) is provided in `YYYY-MM-DD` format, use it directly as `TARGET_DATE`.
 
-Logic:
-- Today is Tuesday–Friday → target date = yesterday (e.g. today is March 26 → take March 25)
+Otherwise, determine the **calendar date of the previous working day**:
+- Today is Tuesday–Friday → target date = yesterday
 - Today is Monday → target date = Friday (skip the weekend)
 
 Calculate via bash:
 ```bash
-DOW=$(date +%u)  # 1=Mon, 7=Sun
-if [ "$DOW" -eq 1 ]; then
-  TARGET_DATE=$(date -d "3 days ago" +%Y-%m-%d 2>/dev/null || date -v-3d +%Y-%m-%d)
+if [ -n "$DATE_ARG" ]; then
+  TARGET_DATE="$DATE_ARG"
 else
-  TARGET_DATE=$(date -d "yesterday" +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d)
+  DOW=$(date +%u)  # 1=Mon, 7=Sun
+  if [ "$DOW" -eq 1 ]; then
+    TARGET_DATE=$(date -d "3 days ago" +%Y-%m-%d 2>/dev/null || date -v-3d +%Y-%m-%d)
+  else
+    TARGET_DATE=$(date -d "yesterday" +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d)
+  fi
 fi
 echo "$TARGET_DATE"
 ```
