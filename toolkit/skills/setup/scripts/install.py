@@ -4,7 +4,7 @@ vsezol marketplace — MCP setup installer.
 
 Reads mcp_template.json, shows available MCP servers,
 lets the user pick which ones to install, asks for missing values,
-and merges them into Claude Desktop config.
+and merges them into both Claude Desktop and Claude Code configs.
 
 Usage:
     python3 install.py                        # interactive mode
@@ -15,10 +15,12 @@ Usage:
 import json
 import sys
 import re
+import shutil
+import subprocess
 import argparse
 from pathlib import Path
 
-CLAUDE_CONFIG_PATH = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+CLAUDE_DESKTOP_CONFIG_PATH = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
 TEMPLATE_PATH = Path(__file__).parent.parent / "mcp_template.json"
 SECRETS_PATH = Path.home() / ".vsezol-marketplace" / "secrets.json"
 
@@ -79,9 +81,34 @@ def is_cloud_connector(server_config: dict) -> bool:
     return "url" in server_config and "command" not in server_config
 
 
+def get_claude_code_servers() -> set[str]:
+    """Get list of MCP servers installed in Claude Code."""
+    claude_cli = shutil.which("claude")
+    if not claude_cli:
+        return set()
+    try:
+        result = subprocess.run(
+            [claude_cli, "mcp", "list"],
+            capture_output=True, text=True, timeout=30,
+        )
+        servers = set()
+        for line in result.stdout.splitlines():
+            # Format: "name: command - status"
+            if ":" in line:
+                name = line.split(":")[0].strip()
+                if name and not name.startswith(("claude.ai", "plugin:")):
+                    servers.add(name)
+        return servers
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return set()
+
+
 def list_servers(template: dict):
     servers = template.get("mcpServers", {})
-    claude_config = load_json(CLAUDE_CONFIG_PATH)
+    desktop_config = load_json(CLAUDE_DESKTOP_CONFIG_PATH)
+    desktop_installed = set(desktop_config.get("mcpServers", {}).keys())
+    code_installed = get_claude_code_servers()
+
     print("\n📦 Available MCP servers:\n")
     for name, config in servers.items():
         meta = config.get("_meta", {})
@@ -89,9 +116,21 @@ def list_servers(template: dict):
         note = meta.get("note", "")
         placeholders = find_placeholders(config)
         placeholder_str = ", ".join(placeholders) if placeholders else "none"
-        already = " [installed]" if name in claude_config.get("mcpServers", {}) else ""
         cloud = " [cloud connector]" if is_cloud_connector(config) else ""
-        print(f"  • {name}{already}{cloud}")
+
+        # Show install status for both targets
+        in_desktop = name in desktop_installed
+        in_code = name in code_installed
+        if in_desktop and in_code:
+            status = " [Desktop ✓ | Code ✓]"
+        elif in_desktop:
+            status = " [Desktop ✓ | Code ✗]"
+        elif in_code:
+            status = " [Desktop ✗ | Code ✓]"
+        else:
+            status = ""
+
+        print(f"  • {name}{status}{cloud}")
         print(f"    {desc}")
         if note:
             print(f"    ℹ️  {note}")
@@ -100,8 +139,12 @@ def list_servers(template: dict):
         print()
 
 
-def check_already_installed(claude_config: dict, server_name: str) -> bool:
-    return server_name in claude_config.get("mcpServers", {})
+def check_already_installed(desktop_config: dict, code_servers: set, server_name: str) -> tuple[bool, bool]:
+    """Returns (installed_in_desktop, installed_in_code)."""
+    return (
+        server_name in desktop_config.get("mcpServers", {}),
+        server_name in code_servers,
+    )
 
 
 def prompt_values(server_name: str, server_config: dict) -> dict:
@@ -126,14 +169,62 @@ def prompt_values(server_name: str, server_config: dict) -> dict:
     return values
 
 
+def add_to_claude_code(name: str, server_config: dict) -> bool:
+    """Add an MCP server to Claude Code via `claude mcp add --scope user`."""
+    claude_cli = shutil.which("claude")
+    if not claude_cli:
+        print(f"  ⚠️  Claude CLI not found, skipping Claude Code install for {name}")
+        return False
+
+    cmd = [claude_cli, "mcp", "add", "--scope", "user"]
+
+    # Collect env vars
+    env_vars = server_config.get("env", {})
+    for key, val in env_vars.items():
+        cmd.extend(["--env", f"{key}={val}"])
+
+    # Separator, then name and command
+    cmd.append("--")
+    cmd.append(name)
+    cmd.append(server_config["command"])
+    cmd.extend(server_config.get("args", []))
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return True
+        else:
+            print(f"  ⚠️  Claude Code: {result.stderr.strip()}")
+            return False
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+def remove_from_claude_code(name: str) -> bool:
+    """Remove an MCP server from Claude Code before re-adding."""
+    claude_cli = shutil.which("claude")
+    if not claude_cli:
+        return False
+    try:
+        subprocess.run(
+            [claude_cli, "mcp", "remove", "--scope", "user", name],
+            capture_output=True, text=True, timeout=15,
+        )
+        return True
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
 def install_servers(template: dict, server_names: list[str], interactive: bool = True):
     servers = template.get("mcpServers", {})
-    claude_config = load_json(CLAUDE_CONFIG_PATH)
+    desktop_config = load_json(CLAUDE_DESKTOP_CONFIG_PATH)
+    code_servers = get_claude_code_servers()
 
-    if "mcpServers" not in claude_config:
-        claude_config["mcpServers"] = {}
+    if "mcpServers" not in desktop_config:
+        desktop_config["mcpServers"] = {}
 
-    installed = []
+    installed_desktop = []
+    installed_code = []
     skipped = []
     cloud_connectors = []
 
@@ -152,15 +243,18 @@ def install_servers(template: dict, server_names: list[str], interactive: bool =
             cloud_connectors.append((name, note))
             continue
 
-        if check_already_installed(claude_config, name):
+        in_desktop, in_code = check_already_installed(desktop_config, code_servers, name)
+        both_installed = in_desktop and in_code
+
+        if both_installed:
             if interactive:
-                answer = input(f"\n  ⚠️  {name} is already installed. Overwrite? [y/N]: ").strip().lower()
+                answer = input(f"\n  ⚠️  {name} is installed in both Desktop & Code. Overwrite? [y/N]: ").strip().lower()
                 if answer != "y":
                     print(f"  ⏭  {name} — skipped")
                     skipped.append(name)
                     continue
             else:
-                print(f"  ⏭  {name} — already installed, skipping")
+                print(f"  ⏭  {name} — already installed in both, skipping")
                 skipped.append(name)
                 continue
 
@@ -181,14 +275,37 @@ def install_servers(template: dict, server_names: list[str], interactive: bool =
                 filled = fill_placeholders(server_config, values)
                 cleaned = clean_meta(filled)
 
-        claude_config["mcpServers"][name] = cleaned
-        installed.append(name)
-        print(f"  ✅ {name} — added")
+        # Install to Claude Desktop
+        if not in_desktop or both_installed:
+            desktop_config["mcpServers"][name] = cleaned
+            installed_desktop.append(name)
 
-    if installed:
-        save_json(CLAUDE_CONFIG_PATH, claude_config)
-        print(f"\n✅ Installed: {', '.join(installed)}")
-        print("🔄 Restart Claude for changes to take effect")
+        # Install to Claude Code
+        if not in_code or both_installed:
+            if in_code:
+                remove_from_claude_code(name)
+            if add_to_claude_code(name, cleaned):
+                installed_code.append(name)
+
+        targets = []
+        if name in installed_desktop:
+            targets.append("Desktop")
+        if name in installed_code:
+            targets.append("Code")
+        if targets:
+            print(f"  ✅ {name} — added to {' + '.join(targets)}")
+
+    if installed_desktop:
+        save_json(CLAUDE_DESKTOP_CONFIG_PATH, desktop_config)
+
+    if installed_desktop or installed_code:
+        print(f"\n✅ Installed:")
+        if installed_desktop:
+            print(f"   Claude Desktop: {', '.join(installed_desktop)}")
+        if installed_code:
+            print(f"   Claude Code:    {', '.join(installed_code)}")
+        if installed_desktop:
+            print("🔄 Restart Claude Desktop for changes to take effect")
     else:
         print("\n📭 Nothing installed")
 
@@ -203,17 +320,27 @@ def install_servers(template: dict, server_names: list[str], interactive: bool =
 
 def interactive_mode(template: dict):
     servers = template.get("mcpServers", {})
-    claude_config = load_json(CLAUDE_CONFIG_PATH)
+    desktop_config = load_json(CLAUDE_DESKTOP_CONFIG_PATH)
+    code_servers = get_claude_code_servers()
 
     print("\n🚀 vsezol marketplace — MCP server installer\n")
+    print("Installs to both Claude Desktop and Claude Code.\n")
     print("Choose servers to install (space-separated), or 'all' for everything:\n")
 
     for i, (name, config) in enumerate(servers.items(), 1):
         meta = config.get("_meta", {})
         desc = meta.get("description", "")
-        already = " [installed]" if check_already_installed(claude_config, name) else ""
+        in_desktop, in_code = check_already_installed(desktop_config, code_servers, name)
+        if in_desktop and in_code:
+            status = " [Desktop ✓ | Code ✓]"
+        elif in_desktop:
+            status = " [Desktop ✓ | Code ✗]"
+        elif in_code:
+            status = " [Desktop ✗ | Code ✓]"
+        else:
+            status = ""
         cloud = " [cloud]" if is_cloud_connector(config) else ""
-        print(f"  {i}. {name} — {desc}{already}{cloud}")
+        print(f"  {i}. {name} — {desc}{status}{cloud}")
 
     print()
     choice = input("Numbers or names (e.g. 1 3 or gitlab context7): ").strip()

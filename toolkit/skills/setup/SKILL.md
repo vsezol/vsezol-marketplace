@@ -2,7 +2,8 @@
 name: setup
 description: >
   Installs MCP servers and configures secrets for the vsezol marketplace.
-  Shows available servers, asks for missing credentials, and merges into Claude Desktop config.
+  Shows available servers, asks for missing credentials, and merges into
+  both Claude Desktop config and Claude Code config.
   Also manages secrets (API tokens, chat IDs) stored in ~/.vsezol-marketplace/secrets.json.
   Use this skill when the user wants to: set up MCP, add a new MCP server,
   install infrastructure, configure secrets, add telegram token, setup mcp,
@@ -13,8 +14,19 @@ argument-hint: "[action: install | secrets | list]"
 # Setup — MCP & Secrets Installer
 
 This skill manages two things:
-1. **MCP servers** — installs them into Claude Desktop config from `mcp_template.json`
+1. **MCP servers** — installs them into **both** Claude Desktop and Claude Code configs from `mcp_template.json`
 2. **Secrets** — stores API tokens and credentials in `~/.vsezol-marketplace/secrets.json`
+
+## Target configs
+
+MCP servers are installed into **two targets simultaneously**:
+
+| Target | Config location | Method |
+|--------|----------------|--------|
+| **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` | Direct JSON write |
+| **Claude Code** | `~/.claude.json` (user scope) | `claude mcp add --scope user` CLI command |
+
+Cloud connectors (Slack, Atlassian) are managed via Claude Settings → Connectors, not via config files.
 
 ## Arguments
 
@@ -37,10 +49,11 @@ Options:
 4. Full setup (secrets + MCP servers)
 ```
 
-**When installing MCP servers**, show available options:
+**When installing MCP servers**, show available options and current status in **both** Desktop and Code:
 
 ```
 Which MCP servers would you like to install?
+(Servers are installed into both Claude Desktop and Claude Code)
 Options:
 1. GitLab — access to repos, MRs, issues
 2. Context7 — library documentation lookup
@@ -48,6 +61,36 @@ Options:
 4. Slack — cloud connector, connect via Settings → Connectors
 5. All local servers (GitLab + Context7)
 ```
+
+**When installing GitLab or any server with `{{PLACEHOLDER}}` values**, ask for credentials via `AskUserQuestion`:
+
+First check if the server already has values in existing configs. If values are found, ask whether to reuse them. If not found, ask for each placeholder:
+
+```
+Please provide your GitLab Personal Access Token.
+(Get one from GitLab → Settings → Access Tokens → read_api scope)
+Options:
+1. I'll paste it now
+2. Skip GitLab for now
+```
+
+If the user chooses to paste, use `AskUserQuestion` again to receive the token value.
+
+Then ask for the GitLab URL:
+
+```
+What is your GitLab instance URL?
+Options:
+1. https://gitlab.com (default)
+2. I'll enter a custom URL
+```
+
+After collecting all values, fill placeholders, strip `_meta`, and write to **both** configs:
+
+1. **Claude Desktop**: merge into `mcpServers` in `claude_desktop_config.json`
+2. **Claude Code**: run `claude mcp add --scope user -e KEY=value -- name command args...`
+
+If a server is already installed in one target but not the other, only install to the missing target.
 
 **When configuring secrets**, ask one at a time:
 
@@ -119,19 +162,25 @@ Some servers are **cloud connectors** (Slack, Atlassian) — they connect via Cl
 ### Mode 1: Via skill (Claude executes)
 
 1. Read `setup/mcp_template.json` from the marketplace
-2. Read `~/Library/Application Support/Claude/claude_desktop_config.json`
-3. Show which servers are available and which are already installed
+2. Read both configs:
+   - `~/Library/Application Support/Claude/claude_desktop_config.json` (Claude Desktop)
+   - Run `claude mcp list` to check Claude Code servers
+3. Show which servers are available and their status in **both** targets
 4. Ask which ones to install
-5. For each server, find `{{...}}` placeholders and ask for values
-6. Fill placeholders, remove `_meta`, add to config
-7. For cloud connectors, guide user to Settings → Connectors
-8. Save config and remind to restart Claude
+5. For each server, find `{{...}}` placeholders and ask for values via `AskUserQuestion`
+6. Fill placeholders, remove `_meta`
+7. Write to **Claude Desktop** config (JSON merge)
+8. Run `claude mcp add --scope user` for **Claude Code**
+   - If server already exists in Code, first run `claude mcp remove --scope user <name>`
+   - Use format: `claude mcp add --scope user -e KEY=value --env KEY2=value2 -- <name> <command> <args...>`
+9. For cloud connectors, guide user to Settings → Connectors
+10. Remind to restart Claude Desktop (Claude Code picks up changes immediately)
 
 ### Mode 2: Via CLI
 
 ```bash
-python3 setup/scripts/install.py              # interactive
-python3 setup/scripts/install.py --list        # list servers
+python3 setup/scripts/install.py              # interactive (installs to both)
+python3 setup/scripts/install.py --list        # list servers (shows status in both)
 python3 setup/scripts/install.py --install gitlab context7  # install specific
 python3 setup/scripts/install.py --secrets     # configure secrets only
 ```
