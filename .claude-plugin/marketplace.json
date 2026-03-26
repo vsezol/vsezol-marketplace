@@ -6,19 +6,10 @@
   },
   "plugins": [
     {
-      "name": "daily-standup",
-      "source": "./daily-standup",
-      "description": "Daily standup report: Jira + GitLab + Slack → Telegram"
-    },
-    {
-      "name": "send-tg-msg",
-      "source": "./send-tg-msg",
-      "description": "Send messages to Telegram via Bot API"
-    },
-    {
-      "name": "setup",
-      "source": "./setup",
-      "description": "Install MCP servers (GitLab, Slack, Atlassian, Context7) into Claude Desktop config"
+      "name": "toolkit",
+      "source": "./toolkit",
+      "description": "Vsezol's personal toolkit — daily standup reports, Telegram notifications, MCP infrastructure setup.",
+      "version": "1.0.0"
     }
   ]
 }

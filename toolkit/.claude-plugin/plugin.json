@@ -1,0 +1,9 @@
+{
+  "name": "toolkit",
+  "version": "1.0.0",
+  "description": "Vsezol's personal toolkit — daily standup reports, Telegram notifications, MCP infrastructure setup.",
+  "author": {
+    "name": "vsezol",
+    "email": "vsezold@gmail.com"
+  }
+}
