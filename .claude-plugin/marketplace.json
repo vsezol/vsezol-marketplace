@@ -6,9 +6,9 @@
   },
   "plugins": [
     {
-      "name": "toolkit",
-      "source": "./toolkit",
-      "description": "Vsezol's personal toolkit — daily standup reports, Telegram notifications, MCP infrastructure setup.",
+      "name": "vsezol",
+      "source": "./vsezol",
+      "description": "Vsezol's personal skill set for everyday life and work automation.",
       "version": "1.0.0"
     }
   ]
