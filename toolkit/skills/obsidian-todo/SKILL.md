@@ -1,10 +1,11 @@
 ---
 name: obsidian-todo
 description: >
-  Manage todos in Obsidian vault. Read, add, toggle, and review daily/monthly/yearly todo lists.
+  Manage todos in Obsidian vault. Read, add, toggle, edit, and review daily/monthly/yearly todo lists.
   Use this skill when the user asks to: show my todos, add a todo, check off a task, what do I need to do today,
-  todo list, mark task done, "what's left for today", show progress, daily tasks, toggle task.
-argument-hint: "[action] [date or file]"
+  todo list, mark task done, "what's left for today", show progress, daily tasks, toggle task,
+  summary, create today's todo, edit todo, what did I do today.
+argument-hint: "[action] [date or scope]"
 ---
 
 # Obsidian Todos
@@ -13,99 +14,234 @@ Manage todo lists in the user's Obsidian vault. Uses the `obsidian` CLI and foll
 
 ## Arguments
 
-- `$0` — **action** (optional). One of: `show`, `add`, `toggle`, `progress`. If omitted, defaults to `show` for today.
-- `$1` — **date or file** (optional). Date like `today`, `yesterday`, `2026-03-25`, or a file name like `March 2026`, `2026`. Defaults to today's daily file.
+- `$0` — **action** (optional). One of: `show`, `add`, `toggle`, `edit`, `summary`, `progress`, `create`. If omitted, defaults to `show` for today.
+- `$1` — **date or scope** (optional). Date like `today`, `yesterday`, `2026-03-25`, or scope like `month`, `year`. Defaults to today.
 
 Examples:
 - `/obsidian-todo` — show today's todos
 - `/obsidian-todo show yesterday`
-- `/obsidian-todo add "Сделать ревью MR"`
+- `/obsidian-todo add "Сделать ревью MR" TTP`
 - `/obsidian-todo toggle "Кардио 40 мин+"`
+- `/obsidian-todo summary` — human-readable summary of today
 - `/obsidian-todo progress month`
+- `/obsidian-todo create` — create today's daily todo from template
 
 ## Vault structure
 
-Todos live in the `todos/` folder of the vault:
+### Hierarchy: Year → Month → Day
 
-| File | Purpose |
-|------|---------|
-| `todos/27 March 26.md` | Daily todos — named as `{day} {Month} {YY}` |
-| `todos/March 2026.md` | Monthly goals — named as `{Month} {YYYY}` |
-| `todos/2026.md` | Yearly goals |
-| `todos/$$$GRIND$$$.md` | Long-term strategy notes |
-| `todos/investments.md` | Investment tracking |
-| `todos/strategies/` | Strategy-specific files |
+The user maintains a **three-level todo hierarchy** in `todos/`:
 
-### Daily file naming convention
+| Level | File example | Naming pattern | Content |
+|-------|-------------|----------------|---------|
+| **Year** | `todos/2026.md` | `{YYYY}.md` | Yearly goals grouped by category: Finances, Work, Development, Health, Hobbies, etc. |
+| **Month** | `todos/March 2026.md` | `{Month} {YYYY}.md` | Monthly goals and targets, more specific than yearly |
+| **Day** | `todos/27 March 26.md` | `{day} {Month} {YY}.md` | Daily tasks with checkboxes |
 
-Files are named `{day} {Month} {YY}.md` — e.g. `27 March 26` for March 27, 2026.
+Additional files:
+- `todos/$$$GRIND$$$.md` — long-term strategy with phases and deadlines
+- `todos/investments.md` — investment tracking and deposit records
+- `todos/strategies/` — canvas and strategy files
+- `todos/old/` — archived daily files from previous months
 
-To resolve a date to a file name:
-```bash
-# For today
-DAY=$(date +%-d)
-MONTH=$(date +%B)
-YY=$(date +%y)
-FILE_NAME="$DAY $MONTH $YY"
-# Result: "27 March 26"
+### Daily file format
+
+Daily files follow a consistent structure with **sections**:
+
+```markdown
+**Main:**
+- [ ] Контроль питания
+- [ ] Кардио 40 мин+
+- [ ] English
+- [ ] Ловушка счастья! > 10 мин
+
+**Evening:**
+- [ ] Прополоскать горло > 1 мин!
+- [ ] Помыть лицо пеной
+- [ ] Выпить таблетки
+
+Тренировка:
+- [ ] Подтягивания -> Брусья -> Приседания
+- [ ] Лодочка 2 мин
+- [ ] Пресс 2 мин
+- [ ] Шея 3 мин
+
+TTP
+- [ ] Work task description
+
+TD
+- [ ] Work task description
+
+LT
+- [ ] Work task description
 ```
 
-### Todo format
+**Sections explained:**
+- **Main** — core daily habits and personal tasks
+- **Evening** — evening routine (skincare, meds)
+- **Тренировка** — workout plan (pullups, planks, abs, neck)
+- **TTP**, **TD**, **LT** — work tasks for different companies/projects
+- Lines starting with `//` — comments/notes, not tasks
+- Lines starting with `TODO:` + numbered items — longer-term reminders, not daily checkboxes
 
-Todos use standard Obsidian checkbox syntax:
-- `- [ ]` — unchecked (pending)
-- `- [x]` — checked (done)
+### Template
 
-Sections are separated by headers like `**Main:**`, `**Evening:**`, or bare labels like `TD`, `LT`, `TTP`.
+New daily files are created from the template at `__templates/daily.md`. This template contains the standard sections with placeholder tasks. When creating a new daily file, always use this template.
 
-Comments use `//` prefix — these are notes, not tasks.
+### Todo syntax
+
+- `- [ ]` — pending task
+- `- [x]` — completed task
+- `**Section:**` or `Section:` — section headers
+- `// comment` — notes/comments (not tasks)
+- `TODO:` + numbered list — reminders carried between days
+
+### Date resolution
+
+To convert a date to a daily file name:
+```bash
+# For a specific date (macOS)
+DAY=$(date -j -f "%Y-%m-%d" "2026-03-27" +%-d)
+MONTH=$(date -j -f "%Y-%m-%d" "2026-03-27" +%B)
+YY=$(date -j -f "%Y-%m-%d" "2026-03-27" +%y)
+FILE_NAME="$DAY $MONTH $YY"
+# Result: "27 March 26"
+
+# For today
+FILE_NAME="$(date +%-d) $(date +%B) $(date +%y)"
+
+# For yesterday
+FILE_NAME="$(date -v-1d +%-d) $(date -v-1d +%B) $(date -v-1d +%y)"
+```
+
+For monthly: `$(date +%B) $(date +%Y)` → `March 2026`
+For yearly: `$(date +%Y)` → `2026`
 
 ## Actions
 
 ### show — Display todos
 
-Read and display the todo file for the specified date/scope.
+Read and display the todo file. Default: today's daily file.
 
 ```bash
 obsidian read file="{file name}"
 ```
 
-Output the content as-is, preserving formatting. Optionally summarize progress (X of Y done).
+Scope shortcuts:
+- `show` or `show today` → today's daily file
+- `show yesterday` → yesterday's daily file
+- `show month` → current monthly file
+- `show year` → current yearly file
+- `show 2026-03-25` → specific date's daily file
+
+Output the content as-is, preserving formatting.
+
+### create — Create a new daily todo
+
+Create today's daily file from the `__templates/daily.md` template.
+
+Workflow:
+1. Read the template: `obsidian read file="daily"` (from `__templates/`)
+2. Check if today's file already exists: `obsidian read file="{today file name}"`
+3. If it exists — warn the user and do NOT overwrite
+4. If it doesn't exist — create it:
+   ```bash
+   obsidian create name="{day} {Month} {YY}" path="todos/" content="{template content}" silent
+   ```
 
 ### add — Add a new todo
 
-Append a new todo item to the specified file. Always append — never rewrite.
+Add a new task to a daily file. The user may specify a section.
 
+**Without section** — append to the end:
 ```bash
 obsidian append file="{file name}" content="- [ ] {task text}"
 ```
 
-If the user specifies a section (e.g. "add to TTP" or "add to Evening"), read the file first, then use `obsidian create ... overwrite silent` to insert the task in the right section. This counts as adding content, not removing — no confirmation needed.
+**With section** (e.g. "add to TTP", "add to Evening") — insert the task under that section:
+1. Read the file
+2. Find the section header
+3. Insert `- [ ] {task text}` after the last task in that section
+4. Write back: `obsidian create name="{file name}" path="todos/" overwrite silent content="{updated}"`
+
+This counts as **adding** content — no confirmation needed.
 
 ### toggle — Toggle a checkbox
 
-Toggle a specific task between `- [ ]` and `- [x]`. **No confirmation needed** — checkboxes are always safe to toggle.
+Toggle a task between `- [ ]` and `- [x]`. **No confirmation needed.**
+
+The user can specify tasks by:
+- Exact text: `toggle "Кардио 40 мин+"`
+- Partial match: `toggle "кардио"` (case-insensitive search)
+- Multiple tasks: `toggle "кардио" "english"` (toggle several at once)
 
 Workflow:
-1. Read the file with `obsidian read`
-2. Find the task by matching the text
-3. Toggle `- [ ]` → `- [x]` or `- [x]` → `- [ ]`
-4. Write back with `obsidian create name="{file name}" path="todos/" overwrite silent content="{updated content}"`
+1. Read the file
+2. Find matching task(s)
+3. If exactly one match — toggle it
+4. If multiple matches — show them and ask which one(s)
+5. If no match — show all pending tasks and ask
+6. Write back with `obsidian create name="{file name}" path="todos/" overwrite silent content="{updated}"`
 
-If the task text is ambiguous (matches multiple lines), ask the user which one.
+### edit — Edit a task or section
 
-### progress — Show progress summary
+Modify existing task text or section content. Follows `obsidian` skill safety rules:
 
-Read the specified file and summarize:
-- Total tasks vs completed
-- Pending tasks grouped by section
-- Completion percentage
+- **Adding new content** — safe, no confirmation
+- **Changing task text** — requires confirmation (show old → new)
+- **Removing tasks** — requires confirmation
+- **Toggling checkboxes** — safe, no confirmation (use `toggle` action)
 
-For `progress month` — read the monthly file (e.g. `March 2026`).
-For `progress year` — read the yearly file (e.g. `2026`).
-For `progress` with no argument — read today's daily file.
+### summary — Human-readable summary
 
-Output a clear, readable summary.
+Generate a natural-language summary of the day. Default: today.
+
+Workflow:
+1. Read the daily file
+2. Count tasks per section: done vs total
+3. Output a **readable summary** like:
+
+```
+Сегодня (27 March):
+
+Main: 2 из 4 сделано. Осталось: Контроль питания, Ловушка счастья.
+Evening: ничего не сделано (3 задачи).
+Тренировка: всё сделано!
+TTP: 1 из 2. Осталось: Таска по show account id.
+TD: сделано! Допинал задачу до ревью.
+LT: 1 из 2. Осталось: Влить интеграцию с контрактами.
+
+Итого: 8 из 15 (53%). Осталось 7 задач.
+```
+
+The summary should be **plain language**, easy to scan. List remaining tasks by name so the user knows exactly what's left.
+
+### progress — Progress across scopes
+
+Show completion stats. Can operate on day, month, or year level.
+
+- `progress` or `progress today` — today's daily file stats
+- `progress month` — read monthly file, count done/total
+- `progress year` — read yearly file, count done/total
+
+Output format:
+```
+March 2026 — прогресс:
+
+Finances: 3 из 6 (50%)
+  Осталось:
+  - To have expenses <= $2800
+  - Разобраться че делать с ИП
+  - To handle with 3 jobs during all month
+
+Здоровье: 4 из 8 (50%)
+  Осталось:
+  - Подтягивания 14/16
+  - Приседания 40
+  ...
+
+Общий прогресс: 15 из 28 (54%)
+```
 
 ## Safety rules
 
@@ -113,11 +249,12 @@ Inherits all safety rules from the `obsidian` skill:
 - **Never delete files**
 - **Appending new todos — always safe, no confirmation needed**
 - **Toggling checkboxes — always safe, no confirmation needed**
-- **Removing or replacing existing content — requires user confirmation**
-- **Creating new daily files — always safe**
+- **Removing or replacing existing text — requires user confirmation**
+- **Creating new daily files from template — always safe**
 
 ## Error handling
 
-- If today's daily file doesn't exist — offer to create it (optionally copying structure from the previous day's file)
-- If `obsidian` CLI is not available — inform the user to enable it in Obsidian settings
+- If today's daily file doesn't exist — offer to create it from `__templates/daily.md`
+- If `obsidian` CLI is not available — inform the user to enable it in Obsidian Settings > General > Advanced, and add `~/bin` to PATH
 - If a task to toggle is not found — show available tasks and ask which one
+- If a section is not found — show available sections and ask

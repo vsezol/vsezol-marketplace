@@ -1,21 +1,24 @@
 ---
 name: setup
 description: >
-  Installs MCP servers and configures secrets for the vsezol marketplace.
+  Installs MCP servers, configures secrets, and sets up tools for the vsezol marketplace.
   Shows available servers, asks for missing credentials, and merges into
   both Claude Desktop config and Claude Code config.
   Also manages secrets (API tokens, chat IDs) stored in ~/.vsezol-marketplace/secrets.json.
+  Can set up Obsidian CLI for vault interaction.
   Use this skill when the user wants to: set up MCP, add a new MCP server,
   install infrastructure, configure secrets, add telegram token, setup mcp,
-  "connect gitlab/slack/atlassian", "configure environment", bootstrap dev environment.
-argument-hint: "[action: install | secrets | list]"
+  "connect gitlab/slack/atlassian", "configure environment", bootstrap dev environment,
+  setup obsidian, configure obsidian cli.
+argument-hint: "[action: install | secrets | obsidian | list]"
 ---
 
-# Setup — MCP & Secrets Installer
+# Setup — MCP, Secrets & Tools Installer
 
-This skill manages two things:
+This skill manages three things:
 1. **MCP servers** — installs them into **both** Claude Desktop and Claude Code configs from `mcp_template.json`
 2. **Secrets** — stores API tokens and credentials in `~/.vsezol-marketplace/secrets.json`
+3. **Tools** — sets up CLI tools like Obsidian CLI
 
 ## Target configs
 
@@ -30,9 +33,9 @@ Cloud connectors (Slack, Atlassian) are managed via Claude Settings → Connecto
 
 ## Arguments
 
-- `$0` — **action** (optional): `install`, `secrets`, or `list`.
+- `$0` — **action** (optional): `install`, `secrets`, `obsidian`, or `list`.
 
-Example: `/setup install` or `/setup secrets`
+Example: `/setup install` or `/setup secrets` or `/setup obsidian`
 
 ## Interactive Setup
 
@@ -45,8 +48,8 @@ What would you like to set up?
 Options:
 1. Install MCP servers (GitLab, Slack, Atlassian, Context7)
 2. Configure secrets (Telegram token, chat ID)
-3. Show available MCP servers and their status
-4. Full setup (secrets + MCP servers)
+3. Set up Obsidian CLI (symlink + PATH)
+4. Full setup (secrets + MCP servers + tools)
 ```
 
 **When installing MCP servers**, show available options and current status in **both** Desktop and Code:
@@ -209,3 +212,71 @@ Rules:
 - `_meta.prompts` — maps placeholder → human-readable hint
 - `_meta.note` — optional install note (e.g. for cloud connectors)
 - `_meta` is stripped on install and never written to Claude config
+
+## Obsidian CLI setup
+
+The `obsidian` and `obsidian-todo` skills require the Obsidian CLI to be available in PATH. This setup is **optional** — only ask the user if they want it.
+
+**When the user picks Obsidian setup (or full setup)**, ask:
+
+```
+Do you want to set up the Obsidian CLI?
+(Required for obsidian and obsidian-todo skills)
+Options:
+1. Yes, set it up
+2. No, skip
+```
+
+If yes, run the following steps:
+
+### Step 1: Check Obsidian is installed
+
+```bash
+ls /Applications/Obsidian.app/Contents/MacOS/Obsidian
+```
+
+If not found — inform the user to install Obsidian from https://obsidian.md/download.
+
+### Step 2: Create symlink
+
+```bash
+mkdir -p ~/bin
+ln -sf /Applications/Obsidian.app/Contents/MacOS/Obsidian ~/bin/obsidian
+```
+
+### Step 3: Add `~/bin` to PATH
+
+Check if `~/bin` is already in the user's shell config:
+
+```bash
+grep -q 'HOME/bin\|~/bin' ~/.zshrc 2>/dev/null
+```
+
+If not present, append:
+
+```bash
+echo '' >> ~/.zshrc
+echo '# Obsidian CLI and other local binaries' >> ~/.zshrc
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+```
+
+### Step 4: Verify CLI works
+
+```bash
+export PATH="$HOME/bin:$PATH"
+obsidian help 2>&1 | head -5
+```
+
+If the output contains "Command line interface is not enabled" — inform the user:
+
+```
+Obsidian CLI is installed but not enabled.
+Please open Obsidian → Settings → General → Advanced → enable "Command line interface".
+```
+
+### Step 5: Confirm
+
+Tell the user:
+- Symlink created at `~/bin/obsidian`
+- PATH updated in `~/.zshrc` (restart terminal or run `source ~/.zshrc`)
+- The `obsidian` and `obsidian-todo` skills are now ready to use
