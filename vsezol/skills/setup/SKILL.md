@@ -4,7 +4,7 @@ description: >
   Installs MCP servers, configures secrets, and sets up tools for the vsezol marketplace.
   Shows available servers, asks for missing credentials, and merges into
   both Claude Desktop config and Claude Code config.
-  Also manages secrets (API tokens, chat IDs) stored in ~/.vsezol-marketplace/secrets.json.
+  Also manages secrets (API tokens, chat IDs) stored in ~/.claude/secrets.json.
   Can set up Obsidian CLI for vault interaction.
   Use this skill when the user wants to: set up MCP, add a new MCP server,
   install infrastructure, configure secrets, add telegram token, setup mcp,
@@ -17,7 +17,7 @@ argument-hint: "[action: install | secrets | obsidian | list]"
 
 This skill manages three things:
 1. **MCP servers** — installs them into **both** Claude Desktop and Claude Code configs from `mcp_template.json`
-2. **Secrets** — stores API tokens and credentials in `~/.vsezol-marketplace/secrets.json`
+2. **Secrets** — stores API tokens and credentials in `~/.claude/secrets.json`
 3. **Tools** — sets up CLI tools like Obsidian CLI
 
 ## Environment detection
@@ -50,8 +50,6 @@ MCP servers are installed into **two targets simultaneously**:
 
 Cloud connectors (Slack, Atlassian, Figma, Miro) are managed via Claude Settings → Connectors, not via config files.
 
-Custom HTTP connectors (Wallet) require a JWT token and are installed to both Desktop (JSON with `headers`) and Code (`claude mcp add --transport http --header`). For Claude Web — add as custom connector at `claude.ai/settings/connectors` (email auth, no token needed).
-
 ## Arguments
 
 - `$0` — **action** (optional): `install`, `secrets`, `obsidian`, or `list`.
@@ -67,7 +65,7 @@ Use `AskUserQuestion` for all user decisions:
 ```
 What would you like to set up?
 Options:
-1. Install MCP servers (GitLab, Slack, Atlassian, Figma, Miro, Wallet, Context7)
+1. Install MCP servers (GitLab, Slack, Atlassian, Figma, Miro, Context7)
 2. Configure secrets (Telegram token, chat ID)
 3. Set up Obsidian CLI (symlink + PATH)
 4. Full setup (secrets + MCP servers + tools)
@@ -85,9 +83,8 @@ Options:                                    Code    Desktop
 3. Slack — cloud connector                  ✓       —
 4. Figma — cloud connector                  —       —
 5. Miro — cloud connector                   —       —
-6. Wallet — custom HTTP (finances)          ✓       ✗
-7. Context7 — library docs (local)          ✓       ✓
-8. All servers
+6. Context7 — library docs (local)          ✓       ✓
+7. All servers
 ```
 
 Legend: ✓ installed, ✗ not installed, — managed via Connectors UI
@@ -144,7 +141,7 @@ Options:
 
 ## Secrets management
 
-Secrets are stored locally at `~/.vsezol-marketplace/secrets.json` and never committed to git. Other skills (like `send-tg-msg`) read from this file.
+Secrets are stored locally at `~/.claude/secrets.json` and never committed to git. This location is accessible by both Claude Code CLI and Claude Desktop. Other skills (like `send-tg-msg`, `wallet`, `balance`) read from this file.
 
 ### Supported secrets
 
@@ -152,22 +149,22 @@ Secrets are stored locally at `~/.vsezol-marketplace/secrets.json` and never com
 |-----|-------------|---------|
 | `TELEGRAM_BOT_TOKEN` | Telegram Bot API token from @BotFather | send-tg-msg, daily-standup |
 | `TELEGRAM_CHAT_ID` | Default Telegram chat/user ID for notifications | send-tg-msg, daily-standup |
+| `WALLET_TOKEN` | JWT token from BudgetBakers Wallet | wallet, balance |
 
 ### How to configure secrets (via skill)
 
 When the user asks to set up secrets or when a skill reports missing secrets:
 
-1. Read `~/.vsezol-marketplace/secrets.json` (create if missing)
+1. Read `~/.claude/secrets.json` (create if missing)
 2. Check which secrets are present and which are missing
 3. For each missing secret, ask the user to provide the value with a clear hint
 4. Save the updated secrets file
 
 ```bash
-mkdir -p ~/.vsezol-marketplace
 # Read or create secrets
 python3 -c "
 import json, os
-path = os.path.expanduser('~/.vsezol-marketplace/secrets.json')
+path = os.path.expanduser('~/.claude/secrets.json')
 data = json.load(open(path)) if os.path.exists(path) else {}
 # ... update values ...
 json.dump(data, open(path, 'w'), indent=2)
@@ -187,13 +184,12 @@ python3 setup/scripts/install.py --secrets
 
 The template `mcp_template.json` defines available MCP servers with `{{PLACEHOLDER}}` values. Each server has a `_meta` field with description and prompt hints.
 
-Servers fall into three categories with different install methods:
+Servers fall into two categories with different install methods:
 
 | Type | Examples | Claude Desktop | Claude Code |
 |------|----------|---------------|-------------|
 | **Local (stdio)** | GitLab, Context7, filesystem, git | JSON merge into `claude_desktop_config.json` | `claude mcp add --scope user` |
 | **Cloud connector** | Slack, Atlassian, Figma, Miro | Settings → Connectors UI | Settings → Connectors UI |
-| **Custom HTTP** | Wallet | JSON merge with `"type": "http"` | `claude mcp add --scope user --transport http` |
 
 ### Mode 1: Via skill (Claude executes)
 
@@ -221,28 +217,6 @@ Servers fall into three categories with different install methods:
   claude mcp add --scope user -e KEY=value -- <name> <command> <args...>
   ```
   If already exists, first run `claude mcp remove --scope user <name>`
-
-**For custom HTTP servers** (have `url` field but no `command` — e.g. Wallet):
-
-Wallet requires a **JWT token** from the Wallet app: Settings → Integrations → generate token.
-Ask the user for this token via `AskUserQuestion` before installing.
-
-- **Claude Desktop**: merge into `mcpServers` in `claude_desktop_config.json`:
-  ```json
-  "wallet": {
-    "type": "http",
-    "url": "https://mcp.wallet.budgetbakers.com/",
-    "headers": {
-      "Authorization": "Bearer <JWT_TOKEN>"
-    }
-  }
-  ```
-- **Claude Code**: run CLI command:
-  ```bash
-  claude mcp add --scope user --transport http --header "Authorization: Bearer <JWT_TOKEN>" wallet https://mcp.wallet.budgetbakers.com/
-  ```
-- **Claude Web** (claude.ai): go to `claude.ai/settings/connectors` → "Add custom connector" → name: `Wallet`, URL: `https://mcp.wallet.budgetbakers.com`. Auth via email code (no token needed for web).
-- Token can be revoked anytime from Wallet Settings → Integrations. All access is read-only.
 
 **For cloud connectors** (Slack, Atlassian, Figma, Miro — have `_meta.note` mentioning "cloud connector"):
 - Cannot be installed via config files — guide user to Settings → Connectors in Claude Desktop/Code/Web UI

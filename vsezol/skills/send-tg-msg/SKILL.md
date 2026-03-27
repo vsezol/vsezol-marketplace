@@ -47,7 +47,7 @@ Options:
 
 ## Secrets
 
-This skill requires a Telegram bot token stored in `~/.vsezol-marketplace/secrets.json`:
+This skill requires a Telegram bot token stored in `~/.claude/secrets.json`:
 
 ```json
 {
@@ -61,7 +61,7 @@ This skill requires a Telegram bot token stored in `~/.vsezol-marketplace/secret
 Before sending, read the secrets file via bash:
 
 ```bash
-SECRETS_FILE="$HOME/.vsezol-marketplace/secrets.json"
+SECRETS_FILE="$HOME/.claude/secrets.json"
 
 if [ ! -f "$SECRETS_FILE" ]; then
   echo "❌ Secrets file not found: $SECRETS_FILE"
@@ -77,10 +77,10 @@ If the secrets file doesn't exist or is missing `TELEGRAM_BOT_TOKEN`, use the in
 
 Then save it:
 ```bash
-mkdir -p ~/.vsezol-marketplace
+mkdir -p ~/.claude
 python3 -c "
 import json, os
-path = os.path.expanduser('~/.vsezol-marketplace/secrets.json')
+path = os.path.expanduser('~/.claude/secrets.json')
 data = json.load(open(path)) if os.path.exists(path) else {}
 data['TELEGRAM_BOT_TOKEN'] = 'TOKEN_FROM_USER'
 data['TELEGRAM_CHAT_ID'] = 'CHAT_ID_FROM_USER'

@@ -22,7 +22,7 @@ Collects user activity from three sources — **Jira**, **GitLab**, and **Slack*
 
 This skill is designed to run autonomously (e.g. on a schedule) without user interaction. **Never ask the user which company to use** — if no company argument is provided, simply query all configured MCP sources (Jira, GitLab, Slack) without filtering by company name.
 
-**Delivery**: by default the report is only output as text. If `--tg` flag is present, also send to Telegram using the `send-tg-msg` skill (reads secrets from `~/.vsezol-marketplace/secrets.json`). Only ask the user about Telegram credentials if `--tg` is used and secrets are missing.
+**Delivery**: by default the report is only output as text. If `--tg` flag is present, also send to Telegram using the `send-tg-msg` skill (reads secrets from `~/.claude/secrets.json`). Only ask the user about Telegram credentials if `--tg` is used and secrets are missing.
 
 ## Steps
 
@@ -117,6 +117,6 @@ Summary:
 
 ### Step 7: Send to Telegram (only if `--tg` flag is present)
 
-If the `--tg` flag was passed in arguments, **additionally** send the report to Telegram using the `send-tg-msg` skill. It reads the chat ID and bot token from `~/.vsezol-marketplace/secrets.json`. If secrets are already configured, send immediately without asking the user. Only use `AskUserQuestion` if secrets are missing.
+If the `--tg` flag was passed in arguments, **additionally** send the report to Telegram using the `send-tg-msg` skill. It reads the chat ID and bot token from `~/.claude/secrets.json`. If secrets are already configured, send immediately without asking the user. Only use `AskUserQuestion` if secrets are missing.
 
 If `--tg` is not present — skip this step entirely.
