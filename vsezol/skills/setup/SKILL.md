@@ -20,6 +20,25 @@ This skill manages three things:
 2. **Secrets** — stores API tokens and credentials in `~/.vsezol-marketplace/secrets.json`
 3. **Tools** — sets up CLI tools like Obsidian CLI
 
+## Environment detection
+
+Setup detects the current environment to prioritize installation and show relevant status.
+
+### Detection method
+
+Run via Bash:
+```bash
+claude mcp list 2>/dev/null
+```
+
+- **If succeeds** → running in **Claude Code CLI**. Highlight Claude Code status, but still offer to install for Desktop too.
+- **If fails** → running in **Claude Desktop**. Highlight Desktop status, but still offer to install for Claude Code too.
+
+Use this to:
+- Show the **current environment's status first** in status displays
+- Default to installing for the **current environment** when the user asks to add a single server
+- Still support installing to both targets when the user asks for full setup
+
 ## Target configs
 
 MCP servers are installed into **two targets simultaneously**:
@@ -54,21 +73,24 @@ Options:
 4. Full setup (secrets + MCP servers + tools)
 ```
 
-**When installing MCP servers**, show available options and current status in **both** Desktop and Code:
+**When installing MCP servers**, detect the environment first (see "Environment detection"), then show available options with status. Show the **current environment's status prominently**:
 
 ```
+Current environment: Claude Code CLI
 Which MCP servers would you like to install?
-(Servers are installed into both Claude Desktop and Claude Code)
-Options:
-1. GitLab — access to repos, MRs, issues (local, needs token)
-2. Atlassian (Jira + Confluence) — cloud connector
-3. Slack — cloud connector
-4. Figma — cloud connector (designs, components)
-5. Miro — cloud connector (boards, diagrams)
-6. Wallet — custom HTTP connector (personal finances, expenses, budgets via BudgetBakers)
-7. Context7 — library documentation lookup (local)
+
+Options:                                    Code    Desktop
+1. GitLab — repos, MRs, issues (local)     ✓       ✓
+2. Atlassian (Jira + Confluence) — cloud    ✓       —
+3. Slack — cloud connector                  ✓       —
+4. Figma — cloud connector                  —       —
+5. Miro — cloud connector                   —       —
+6. Wallet — custom HTTP (finances)          ✓       ✗
+7. Context7 — library docs (local)          ✓       ✓
 8. All servers
 ```
+
+Legend: ✓ installed, ✗ not installed, — managed via Connectors UI
 
 **When installing GitLab or any server with `{{PLACEHOLDER}}` values**, ask for credentials via `AskUserQuestion`:
 

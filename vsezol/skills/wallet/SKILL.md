@@ -15,11 +15,13 @@ Query personal financial data from BudgetBakers Wallet via MCP. **All operations
 
 ## Prerequisites
 
-Wallet MCP must be connected. Set up via `/vsezol:setup wallet`.
+Wallet MCP must be connected **in the current environment**. The MCP may be installed in Claude Code CLI but not in Claude Desktop, or vice versa.
+
+Before using Wallet tools, verify the MCP is available by running `mcp-check wallet` as a sub-agent. If it reports `NOT CONFIGURED`, suggest `/vsezol:setup wallet` to install it for the current environment.
 
 ## Available MCP tools
 
-All tools are prefixed with `mcp__wallet__` in Claude Code.
+All tools are prefixed with `mcp__wallet__`.
 
 ### Core financial data
 
@@ -86,6 +88,6 @@ When the user asks about finances, map their request to the right tool(s):
 
 ## Error handling
 
-- If Wallet MCP is not connected — suggest running `/vsezol:setup wallet`
+- If Wallet MCP is not connected in the current environment — suggest running `/vsezol:setup wallet` and specify which environment needs it (Claude Code CLI or Claude Desktop)
 - If a tool returns an error — inform the user and suggest checking their Wallet token in Settings → Integrations
 - If no data matches filters — say "no transactions found for this period/category" rather than failing silently
