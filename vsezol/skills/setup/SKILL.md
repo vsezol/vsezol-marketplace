@@ -165,7 +165,13 @@ python3 setup/scripts/install.py --secrets
 
 The template `mcp_template.json` defines available MCP servers with `{{PLACEHOLDER}}` values. Each server has a `_meta` field with description and prompt hints.
 
-Some servers are **cloud connectors** (Slack, Atlassian) — they connect via Claude's MCP registry UI, not via local npx.
+Servers fall into three categories with different install methods:
+
+| Type | Examples | Claude Desktop | Claude Code |
+|------|----------|---------------|-------------|
+| **Local (stdio)** | GitLab, Context7, filesystem, git | JSON merge into `claude_desktop_config.json` | `claude mcp add --scope user` |
+| **Cloud connector** | Slack, Atlassian, Figma, Miro | Settings → Connectors UI | Settings → Connectors UI |
+| **Custom HTTP** | Wallet | JSON merge with `"type": "http"` | `claude mcp add --scope user --transport http` |
 
 ### Mode 1: Via skill (Claude executes)
 
@@ -177,18 +183,42 @@ Some servers are **cloud connectors** (Slack, Atlassian) — they connect via Cl
 4. Ask which ones to install
 5. For each server, find `{{...}}` placeholders and ask for values via `AskUserQuestion`
 6. Fill placeholders, remove `_meta`
-7. Write to **Claude Desktop** config (JSON merge)
-8. Run `claude mcp add --scope user` for **Claude Code**
-   - If server already exists in Code, first run `claude mcp remove --scope user <name>`
-   - Use format: `claude mcp add --scope user -e KEY=value --env KEY2=value2 -- <name> <command> <args...>`
-9. For cloud connectors (Slack, Atlassian, Figma, Miro), guide user to Settings → Connectors
-10. For custom HTTP connectors (Wallet), install to **Claude Code** via CLI:
-    ```bash
-    claude mcp add --scope user --transport http wallet https://mcp.wallet.budgetbakers.com
-    ```
-    For **Claude Web** (claude.ai): go to `claude.ai/settings/connectors` → "Add custom connector" → name: `Wallet`, URL: `https://mcp.wallet.budgetbakers.com`
-    Auth: email-based — user enters their BudgetBakers Wallet email, receives a code, and submits it. Token management is automatic after that.
-11. Remind to restart Claude Desktop (Claude Code picks up changes immediately)
+7. Install based on server type:
+
+**For local (stdio) servers** (have `command` field — e.g. GitLab, Context7, filesystem, git):
+- **Claude Desktop**: merge into `mcpServers` in `claude_desktop_config.json`:
+  ```json
+  "server-name": {
+    "command": "npx",
+    "args": ["-y", "@package/name"],
+    "env": { "KEY": "value" }
+  }
+  ```
+- **Claude Code**: run CLI command:
+  ```bash
+  claude mcp add --scope user -e KEY=value -- <name> <command> <args...>
+  ```
+  If already exists, first run `claude mcp remove --scope user <name>`
+
+**For custom HTTP servers** (have `url` field but no `command` — e.g. Wallet):
+- **Claude Desktop**: merge into `mcpServers` in `claude_desktop_config.json`:
+  ```json
+  "wallet": {
+    "type": "http",
+    "url": "https://mcp.wallet.budgetbakers.com"
+  }
+  ```
+- **Claude Code**: run CLI command:
+  ```bash
+  claude mcp add --scope user --transport http <name> <url>
+  ```
+  Example: `claude mcp add --scope user --transport http wallet https://mcp.wallet.budgetbakers.com`
+- Auth is email-based for Wallet — user enters their BudgetBakers email, receives a code, and submits it. Token management is automatic.
+
+**For cloud connectors** (Slack, Atlassian, Figma, Miro — have `_meta.note` mentioning "cloud connector"):
+- Cannot be installed via config files — guide user to Settings → Connectors in Claude Desktop/Code/Web UI
+
+8. After installing, remind to **restart Claude Desktop** (Claude Code picks up changes immediately)
 
 ### Mode 2: Via CLI
 
