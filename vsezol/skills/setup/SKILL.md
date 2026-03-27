@@ -31,7 +31,7 @@ MCP servers are installed into **two targets simultaneously**:
 
 Cloud connectors (Slack, Atlassian, Figma, Miro) are managed via Claude Settings → Connectors, not via config files.
 
-Custom connectors (Wallet) are added manually at `claude.ai/settings/connectors` → "Add custom connector".
+Custom HTTP connectors (Wallet) can be added to Claude Code via `claude mcp add --scope user --transport http <name> <url>`, and to Claude Web via `claude.ai/settings/connectors` → "Add custom connector".
 
 ## Arguments
 
@@ -65,7 +65,7 @@ Options:
 3. Slack — cloud connector
 4. Figma — cloud connector (designs, components)
 5. Miro — cloud connector (boards, diagrams)
-6. Wallet — custom cloud connector (personal finances, expenses, budgets)
+6. Wallet — custom HTTP connector (personal finances, expenses, budgets via BudgetBakers)
 7. Context7 — library documentation lookup (local)
 8. All servers
 ```
@@ -182,8 +182,13 @@ Some servers are **cloud connectors** (Slack, Atlassian) — they connect via Cl
    - If server already exists in Code, first run `claude mcp remove --scope user <name>`
    - Use format: `claude mcp add --scope user -e KEY=value --env KEY2=value2 -- <name> <command> <args...>`
 9. For cloud connectors (Slack, Atlassian, Figma, Miro), guide user to Settings → Connectors
-10. For Wallet (custom connector), guide user to `claude.ai/settings/connectors` → "Add custom connector" → name: `Wallet`, URL: `https://mcp.wallet.budgetbakers.com`. Auth is via email code from the user's BudgetBakers Wallet account
-10. Remind to restart Claude Desktop (Claude Code picks up changes immediately)
+10. For custom HTTP connectors (Wallet), install to **Claude Code** via CLI:
+    ```bash
+    claude mcp add --scope user --transport http wallet https://mcp.wallet.budgetbakers.com
+    ```
+    For **Claude Web** (claude.ai): go to `claude.ai/settings/connectors` → "Add custom connector" → name: `Wallet`, URL: `https://mcp.wallet.budgetbakers.com`
+    Auth: email-based — user enters their BudgetBakers Wallet email, receives a code, and submits it. Token management is automatic after that.
+11. Remind to restart Claude Desktop (Claude Code picks up changes immediately)
 
 ### Mode 2: Via CLI
 
