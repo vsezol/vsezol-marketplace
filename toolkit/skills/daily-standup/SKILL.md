@@ -77,7 +77,8 @@ Use GitLab MCP tools (`@zereight/mcp-gitlab`, connected via config):
 1. Call `my_issues` or `list_issues` with `updated_after=TARGET_DATE` and `updated_before=TARGET_DATE+1`
 2. Call `list_merge_requests` with `updated_after=TARGET_DATE` and `updated_before=TARGET_DATE+1`, scope=all — find MRs the user opened, updated, or merged on that exact date
 3. For each MR collect: number, title, status (opened/merged/closed), project
-4. If available — check push/commit activity via `list_projects` and related tools
+4. Call `list_events` with `action=pushed`, `after=TARGET_DATE-1` (day before), `before=TARGET_DATE+1` (day after) to get push events for the exact target date. Note: the API uses exclusive boundaries, so to include events on 2026-03-25 use `after=2026-03-24` and `before=2026-03-26`
+5. For each push event collect: project name, branch, number of commits. This captures work pushed to branches that don't have a merge request yet
 
 ### Step 4: Collect data from Slack (Slack MCP)
 
@@ -98,9 +99,13 @@ Compose the report in **Russian** using this format:
 • [PROJ-123] Issue title — status
 • [PROJ-456] Another issue — In Progress → Done
 
-💻 GitLab:
+💻 GitLab MRs:
 • MR !789 "MR title" — merged (project-name)
 • MR !790 "Another MR" — opened (project-name)
+
+🔀 GitLab Pushes:
+• project-name/branch-name — 3 commits
+• another-project/feature-branch — 1 commit
 
 💬 Slack:
 • #channel-name — discussed topic X, decided Y
