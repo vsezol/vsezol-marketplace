@@ -31,6 +31,24 @@
         "note": "Cloud connector — connect via Claude MCP registry (Settings → Connectors → Atlassian)"
       }
     },
+    "figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp",
+      "_meta": {
+        "description": "Figma MCP — access Figma designs, components, and design tokens",
+        "prompts": {},
+        "note": "Cloud connector — connect via Claude MCP registry (Settings → Connectors → Figma)"
+      }
+    },
+    "miro": {
+      "type": "http",
+      "url": "https://mcp.miro.com",
+      "_meta": {
+        "description": "Miro MCP — access Miro boards, sticky notes, and diagrams",
+        "prompts": {},
+        "note": "Cloud connector — connect via Claude MCP registry (Settings → Connectors → Miro)"
+      }
+    },
     "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"],

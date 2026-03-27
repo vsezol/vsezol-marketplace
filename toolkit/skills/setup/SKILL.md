@@ -46,7 +46,7 @@ Use `AskUserQuestion` for all user decisions:
 ```
 What would you like to set up?
 Options:
-1. Install MCP servers (GitLab, Slack, Atlassian, Context7)
+1. Install MCP servers (GitLab, Slack, Atlassian, Figma, Miro, Context7)
 2. Configure secrets (Telegram token, chat ID)
 3. Set up Obsidian CLI (symlink + PATH)
 4. Full setup (secrets + MCP servers + tools)
@@ -58,11 +58,13 @@ Options:
 Which MCP servers would you like to install?
 (Servers are installed into both Claude Desktop and Claude Code)
 Options:
-1. GitLab — access to repos, MRs, issues
-2. Context7 — library documentation lookup
-3. Atlassian (Jira + Confluence) — cloud connector, connect via Settings → Connectors
-4. Slack — cloud connector, connect via Settings → Connectors
-5. All local servers (GitLab + Context7)
+1. GitLab — access to repos, MRs, issues (local, needs token)
+2. Atlassian (Jira + Confluence) — cloud connector
+3. Slack — cloud connector
+4. Figma — cloud connector (designs, components)
+5. Miro — cloud connector (boards, diagrams)
+6. Context7 — library documentation lookup (local)
+7. All servers
 ```
 
 **When installing GitLab or any server with `{{PLACEHOLDER}}` values**, ask for credentials via `AskUserQuestion`:

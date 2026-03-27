@@ -17,7 +17,7 @@ This skill is designed to be **launched as a sub-agent** (via the Agent tool) be
 
 ## Arguments
 
-- `$0...$N` — **MCP names** to check, space-separated. Supported: `gitlab`, `jira`, `slack`, `all`.
+- `$0...$N` — **MCP names** to check, space-separated. Supported: `gitlab`, `jira`, `slack`, `figma`, `miro`, `all`.
 - If no arguments — check all known MCPs.
 
 Examples:
@@ -57,6 +57,18 @@ Call: mcp__claude_ai_Slack__slack_search_public_and_private
 Args: { "query": "test", "limit": 1 }
 ```
 - **UP** if it returns results (even empty)
+- **DOWN** if it throws an error or times out
+
+### Figma (`mcp__figma__*`)
+
+Probe: any lightweight Figma MCP call available. Since Figma MCP is an HTTP cloud connector, attempt any list/read call.
+- **UP** if it responds without error
+- **DOWN** if it throws an error or times out
+
+### Miro (`mcp__miro__*`)
+
+Probe: any lightweight Miro MCP call available. Since Miro MCP is an HTTP cloud connector, attempt any list/read call.
+- **UP** if it responds without error
 - **DOWN** if it throws an error or times out
 
 ## Execution
