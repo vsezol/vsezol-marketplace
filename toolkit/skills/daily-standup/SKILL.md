@@ -26,6 +26,22 @@ This skill is designed to run autonomously (e.g. on a schedule) without user int
 
 ## Steps
 
+### Step 0: Check MCP availability
+
+Before collecting data, launch the `mcp-check` skill as a **sub-agent** to verify all required MCPs are up:
+
+```
+Launch Agent with prompt:
+  "Run the mcp-check skill to verify these MCPs are available: gitlab jira slack.
+   Return the status of each MCP."
+```
+
+Use the result to determine which sources to query. If an MCP is down:
+- **Skip** that source during data collection (don't waste time on failing requests)
+- **Note** in the report which source was unavailable
+
+This step runs in parallel with Step 1 (date calculation) for speed.
+
 ### Step 1: Determine target date
 
 If a date argument (`$1`) is provided in `YYYY-MM-DD` format, use it directly as `TARGET_DATE`.
@@ -123,6 +139,7 @@ If `--tg` is not present — skip this step entirely.
 
 ## Error handling
 
-- If an MCP source is unavailable — collect data from the rest and note which source was down
+- If `mcp-check` reports an MCP as unavailable — skip that source and note it in the report (e.g. "GitLab: unavailable")
+- If an MCP passes the health check but fails during data collection — note the error and continue with other sources
 - If Telegram API is unreachable — save the report to a file and notify the user
 - Never fail silently — always inform about problems
