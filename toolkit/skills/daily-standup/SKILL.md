@@ -93,28 +93,31 @@ Use Slack MCP tools (connected via config):
 Compose the report in **Russian** using this format:
 
 ```
-🗓 Дейли-отчёт за [date]
+Daily Report {Company} {Date}
 
-📋 Jira:
-• [PROJ-123] Issue title — status
-• [PROJ-456] Another issue — In Progress → Done
+Jira:
+- {human-readable task description: what was done and current status}
+- {human-readable task description}
 
-💻 GitLab MRs:
-• MR !789 "MR title" — merged (project-name)
-• MR !790 "Another MR" — opened (project-name)
+Gitlab:
+- {human-readable activity description: what was done, in which project, why}
+- {human-readable activity description}
 
-🔀 GitLab Pushes:
-• project-name/branch-name — 3 commits
-• another-project/feature-branch — 1 commit
+Slack:
+- {human-readable activity description: what was discussed, what was decided}
+- {human-readable activity description}
 
-💬 Slack:
-• #channel-name — discussed topic X, decided Y
-• #another-channel — answered question about Z
-
-🎯 Summary: 1-2 sentence recap of what was accomplished.
+Summary:
+{2-4 sentences in natural language, as if you're telling a colleague at standup what you did yesterday. Focus on WHAT was accomplished and WHY, not ticket numbers or technical IDs. Should be easy to read aloud at a daily meeting. Avoid listing raw numbers, hashes, or MR IDs here — use plain human language.}
 ```
 
-If there's no data from a source — write "no activity for this date", don't skip the section.
+**Formatting rules:**
+- Each bullet point should be a clear, self-contained sentence — not a raw ticket key or MR number
+- Jira: include the ticket key (e.g. PROJ-123) but lead with a meaningful description, e.g. "Fixed validation on signup form (PROJ-123, Done)"
+- GitLab: describe what was done, not just "MR opened". E.g. "Opened MR for refactoring auth middleware in bms" or "Pushed fixes for email templates to feature branch in web-app"
+- Slack: summarize the discussion topic and outcome, not just the channel name
+- Summary: write it as if speaking at a standup — natural, concise, no jargon dump. A non-technical PM should understand it
+- If there's no data from a source — write "no activity", don't skip the section
 
 ### Step 6: Send to Telegram
 
