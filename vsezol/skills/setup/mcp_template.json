@@ -51,11 +51,16 @@
     },
     "wallet": {
       "type": "http",
-      "url": "https://mcp.wallet.budgetbakers.com",
+      "url": "https://mcp.wallet.budgetbakers.com/",
+      "headers": {
+        "Authorization": "Bearer {{WALLET_JWT_TOKEN}}"
+      },
       "_meta": {
-        "description": "Wallet MCP — query personal finances, expenses, budgets, and spending categories from BudgetBakers Wallet",
-        "prompts": {},
-        "note": "Custom cloud connector — add manually at claude.ai/settings/connectors → 'Add custom connector', name: Wallet, URL: https://mcp.wallet.budgetbakers.com. Auth via email code from your Wallet account."
+        "description": "Wallet MCP — query personal finances, expenses, budgets, spending categories, goals, and recurring payments (read-only)",
+        "prompts": {
+          "WALLET_JWT_TOKEN": "JWT token from BudgetBakers Wallet (Settings → Integrations → generate token)"
+        },
+        "note": "Custom HTTP connector. For Claude Web: add at claude.ai/settings/connectors as custom connector (uses email auth instead of token)."
       }
     },
     "context7": {

@@ -31,7 +31,7 @@ MCP servers are installed into **two targets simultaneously**:
 
 Cloud connectors (Slack, Atlassian, Figma, Miro) are managed via Claude Settings → Connectors, not via config files.
 
-Custom HTTP connectors (Wallet) can be added to Claude Code via `claude mcp add --scope user --transport http <name> <url>`, and to Claude Web via `claude.ai/settings/connectors` → "Add custom connector".
+Custom HTTP connectors (Wallet) require a JWT token and are installed to both Desktop (JSON with `headers`) and Code (`claude mcp add --transport http --header`). For Claude Web — add as custom connector at `claude.ai/settings/connectors` (email auth, no token needed).
 
 ## Arguments
 
@@ -201,19 +201,26 @@ Servers fall into three categories with different install methods:
   If already exists, first run `claude mcp remove --scope user <name>`
 
 **For custom HTTP servers** (have `url` field but no `command` — e.g. Wallet):
+
+Wallet requires a **JWT token** from the Wallet app: Settings → Integrations → generate token.
+Ask the user for this token via `AskUserQuestion` before installing.
+
 - **Claude Desktop**: merge into `mcpServers` in `claude_desktop_config.json`:
   ```json
   "wallet": {
     "type": "http",
-    "url": "https://mcp.wallet.budgetbakers.com"
+    "url": "https://mcp.wallet.budgetbakers.com/",
+    "headers": {
+      "Authorization": "Bearer <JWT_TOKEN>"
+    }
   }
   ```
 - **Claude Code**: run CLI command:
   ```bash
-  claude mcp add --scope user --transport http <name> <url>
+  claude mcp add --scope user --transport http --header "Authorization: Bearer <JWT_TOKEN>" wallet https://mcp.wallet.budgetbakers.com/
   ```
-  Example: `claude mcp add --scope user --transport http wallet https://mcp.wallet.budgetbakers.com`
-- Auth is email-based for Wallet — user enters their BudgetBakers email, receives a code, and submits it. Token management is automatic.
+- **Claude Web** (claude.ai): go to `claude.ai/settings/connectors` → "Add custom connector" → name: `Wallet`, URL: `https://mcp.wallet.budgetbakers.com`. Auth via email code (no token needed for web).
+- Token can be revoked anytime from Wallet Settings → Integrations. All access is read-only.
 
 **For cloud connectors** (Slack, Atlassian, Figma, Miro — have `_meta.note` mentioning "cloud connector"):
 - Cannot be installed via config files — guide user to Settings → Connectors in Claude Desktop/Code/Web UI
