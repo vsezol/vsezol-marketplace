@@ -2,20 +2,21 @@
 name: daily-standup
 description: >
   Generates a daily standup report by collecting activity from Jira, GitLab, and Slack
-  for the previous working day, then sends it to Telegram. Takes a company name as argument.
+  for the previous working day. Outputs the report as text. Optionally sends to Telegram with --tg flag.
   Use this skill when the user asks to: prepare a standup report, summarize what was done yesterday,
   daily standup, daily report, "what did I do yesterday", morning status update.
-argument-hint: "[company-name] [YYYY-MM-DD]"
+argument-hint: "[company-name] [YYYY-MM-DD] [--tg]"
 ---
 
 # Daily Standup Report
 
-Collects user activity from three sources — **Jira**, **GitLab**, and **Slack** — for the previous working day, formats a standup report, and sends it to Telegram.
+Collects user activity from three sources — **Jira**, **GitLab**, and **Slack** — for the previous working day and formats a standup report. By default outputs the report as text. With `--tg` flag, also sends it to Telegram.
 
 ## Arguments
 
 - `$0` — **company name** (e.g. `thetradingpit`). Used to find the correct Jira site and GitLab projects.
 - `$1` — **date** (optional, format `YYYY-MM-DD`). The date to generate the report for. If omitted, uses the previous working day.
+- `--tg` — (optional flag, can appear anywhere in arguments). If present, also send the report to Telegram via the `send-tg-msg` skill.
 
 ## Interactive Setup
 
@@ -30,7 +31,7 @@ Options:
 2. Other (specify)
 ```
 
-**Delivery is automatic** — after collecting data, send the report to Telegram using the `send-tg-msg` skill without asking the user. The skill reads `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` from `~/.vsezol-marketplace/secrets.json`. Only ask the user if secrets are missing.
+**Delivery**: by default the report is only output as text. If `--tg` flag is present, also send to Telegram using the `send-tg-msg` skill (reads secrets from `~/.vsezol-marketplace/secrets.json`). Only ask the user about Telegram credentials if `--tg` is used and secrets are missing.
 
 ## Steps
 
@@ -119,11 +120,15 @@ Summary:
 - Summary: write it as if speaking at a standup — natural, concise, no jargon dump. A non-technical PM should understand it
 - If there's no data from a source — write "no activity", don't skip the section
 
-### Step 6: Send to Telegram
+### Step 6: Output the report
 
-Use the `send-tg-msg` skill to deliver the report. It reads the chat ID and bot token from `~/.vsezol-marketplace/secrets.json`. If secrets are already configured, send immediately without asking the user. Only use `AskUserQuestion` if `TELEGRAM_BOT_TOKEN` or `TELEGRAM_CHAT_ID` is missing.
+**Always** output the formatted report as text in the conversation — this is the primary delivery method.
 
-Always send the report, even if data is scarce — "low activity" is better than silence.
+### Step 7: Send to Telegram (only if `--tg` flag is present)
+
+If the `--tg` flag was passed in arguments, **additionally** send the report to Telegram using the `send-tg-msg` skill. It reads the chat ID and bot token from `~/.vsezol-marketplace/secrets.json`. If secrets are already configured, send immediately without asking the user. Only use `AskUserQuestion` if secrets are missing.
+
+If `--tg` is not present — skip this step entirely.
 
 ## Error handling
 
