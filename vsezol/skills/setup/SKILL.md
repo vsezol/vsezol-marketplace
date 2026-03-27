@@ -29,7 +29,9 @@ MCP servers are installed into **two targets simultaneously**:
 | **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` | Direct JSON write |
 | **Claude Code** | `~/.claude.json` (user scope) | `claude mcp add --scope user` CLI command |
 
-Cloud connectors (Slack, Atlassian) are managed via Claude Settings → Connectors, not via config files.
+Cloud connectors (Slack, Atlassian, Figma, Miro) are managed via Claude Settings → Connectors, not via config files.
+
+Custom connectors (Wallet) are added manually at `claude.ai/settings/connectors` → "Add custom connector".
 
 ## Arguments
 
@@ -46,7 +48,7 @@ Use `AskUserQuestion` for all user decisions:
 ```
 What would you like to set up?
 Options:
-1. Install MCP servers (GitLab, Slack, Atlassian, Figma, Miro, Context7)
+1. Install MCP servers (GitLab, Slack, Atlassian, Figma, Miro, Wallet, Context7)
 2. Configure secrets (Telegram token, chat ID)
 3. Set up Obsidian CLI (symlink + PATH)
 4. Full setup (secrets + MCP servers + tools)
@@ -63,8 +65,9 @@ Options:
 3. Slack — cloud connector
 4. Figma — cloud connector (designs, components)
 5. Miro — cloud connector (boards, diagrams)
-6. Context7 — library documentation lookup (local)
-7. All servers
+6. Wallet — custom cloud connector (personal finances, expenses, budgets)
+7. Context7 — library documentation lookup (local)
+8. All servers
 ```
 
 **When installing GitLab or any server with `{{PLACEHOLDER}}` values**, ask for credentials via `AskUserQuestion`:
@@ -178,7 +181,8 @@ Some servers are **cloud connectors** (Slack, Atlassian) — they connect via Cl
 8. Run `claude mcp add --scope user` for **Claude Code**
    - If server already exists in Code, first run `claude mcp remove --scope user <name>`
    - Use format: `claude mcp add --scope user -e KEY=value --env KEY2=value2 -- <name> <command> <args...>`
-9. For cloud connectors, guide user to Settings → Connectors
+9. For cloud connectors (Slack, Atlassian, Figma, Miro), guide user to Settings → Connectors
+10. For Wallet (custom connector), guide user to `claude.ai/settings/connectors` → "Add custom connector" → name: `Wallet`, URL: `https://mcp.wallet.budgetbakers.com`. Auth is via email code from the user's BudgetBakers Wallet account
 10. Remind to restart Claude Desktop (Claude Code picks up changes immediately)
 
 ### Mode 2: Via CLI

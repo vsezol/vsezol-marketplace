@@ -49,6 +49,15 @@
         "note": "Cloud connector — connect via Claude MCP registry (Settings → Connectors → Miro)"
       }
     },
+    "wallet": {
+      "type": "http",
+      "url": "https://mcp.wallet.budgetbakers.com",
+      "_meta": {
+        "description": "Wallet MCP — query personal finances, expenses, budgets, and spending categories from BudgetBakers Wallet",
+        "prompts": {},
+        "note": "Custom cloud connector — add manually at claude.ai/settings/connectors → 'Add custom connector', name: Wallet, URL: https://mcp.wallet.budgetbakers.com. Auth via email code from your Wallet account."
+      }
+    },
     "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"],
