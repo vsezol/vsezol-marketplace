@@ -14,22 +14,13 @@ Collects user activity from three sources — **Jira**, **GitLab**, and **Slack*
 
 ## Arguments
 
-- `$0` — **company name** (e.g. `thetradingpit`). Used to find the correct Jira site and GitLab projects.
+- `$0` — **company name** (optional, e.g. `thetradingpit`). Used to filter the correct Jira site and GitLab projects. If omitted, collect data from **all** configured sources without filtering by company.
 - `$1` — **date** (optional, format `YYYY-MM-DD`). The date to generate the report for. If omitted, uses the previous working day.
 - `--tg` — (optional flag, can appear anywhere in arguments). If present, also send the report to Telegram via the `send-tg-msg` skill.
 
 ## Interactive Setup
 
-This skill is designed to run autonomously (e.g. on a schedule) without user interaction when secrets are configured. Only ask questions when strictly necessary.
-
-**If no company argument is provided**, ask:
-
-```
-Which company should I prepare the report for?
-Options:
-1. thetradingpit
-2. Other (specify)
-```
+This skill is designed to run autonomously (e.g. on a schedule) without user interaction. **Never ask the user which company to use** — if no company argument is provided, simply query all configured MCP sources (Jira, GitLab, Slack) without filtering by company name.
 
 **Delivery**: by default the report is only output as text. If `--tg` flag is present, also send to Telegram using the `send-tg-msg` skill (reads secrets from `~/.vsezol-marketplace/secrets.json`). Only ask the user about Telegram credentials if `--tg` is used and secrets are missing.
 
@@ -64,7 +55,7 @@ All queries below filter **by this exact date**, not by relative "-1d" or timest
 
 Use Atlassian MCP tools (connected via config):
 
-1. Call `getAccessibleAtlassianResources` to find the company site (match by argument — company name).
+1. Call `getAccessibleAtlassianResources` to list available sites. If a company argument was provided, match by name. If no argument — use the first available site (or query all sites).
 2. Use `searchJiraIssuesUsingJql` with date-bound JQL:
    - `assignee = currentUser() AND updated >= "YYYY-MM-DD" AND updated < "YYYY-MM-DD+1" ORDER BY updated DESC`
    - Where `YYYY-MM-DD` is `TARGET_DATE` and `YYYY-MM-DD+1` is the next day
@@ -94,7 +85,7 @@ Use Slack MCP tools (connected via config):
 Compose the report in **Russian** using this format:
 
 ```
-Daily Report {Company} {Date}
+Daily Report {Company (if specified)} {Date}
 
 Jira:
 - {human-readable task description: what was done and current status}
