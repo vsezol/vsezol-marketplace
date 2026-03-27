@@ -17,12 +17,13 @@ This skill is designed to be **launched as a sub-agent** (via the Agent tool) be
 
 ## Arguments
 
-- `$0...$N` — **MCP names** to check, space-separated. Supported: `gitlab`, `jira`, `slack`, `figma`, `miro`, `all`.
+- `$0...$N` — **MCP names** to check, space-separated. Supported: `gitlab`, `jira`, `slack`, `figma`, `miro`, `wallet`, `all`.
 - If no arguments — check all known MCPs.
 
 Examples:
 - `/mcp-check gitlab jira slack`
 - `/mcp-check all`
+- `/mcp-check wallet`
 - `/mcp-check gitlab`
 
 ## Probe definitions
@@ -69,6 +70,16 @@ Probe: any lightweight Figma MCP call available. Since Figma MCP is an HTTP clou
 
 Probe: any lightweight Miro MCP call available. Since Miro MCP is an HTTP cloud connector, attempt any list/read call.
 - **UP** if it responds without error
+- **DOWN** if it throws an error or times out
+
+### Wallet / BudgetBakers (`mcp__wallet__*`)
+
+Probe: list accounts (lightweight, read-only).
+```
+Call: mcp__wallet__get_accounts
+Args: {}
+```
+- **UP** if it returns a list of accounts
 - **DOWN** if it throws an error or times out
 
 ## Execution
